@@ -1,0 +1,14 @@
+setuptools>=18.0
+pandas
+networkx
+pyshp
+smopy
+nose
+Cython
+six
+geoindex
+osmread==0.2
+geojson>=2.0.0
+shapely
+pyproj
+matplotlib-scalebar

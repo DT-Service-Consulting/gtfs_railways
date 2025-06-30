@@ -1,4 +1,0 @@
-recursive-include gtfspy/routing *.pyx
-recursive-include gtfspy/routing *.c
-
-
