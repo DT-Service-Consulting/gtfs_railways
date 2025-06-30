@@ -1,0 +1,9 @@
+pandas
+numpy
+bokeh
+networkx
+matplotlib
+geopy
+thefuzz
+gtfspy
+ipython

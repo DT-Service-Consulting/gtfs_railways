@@ -1,0 +1,23 @@
+Metadata-Version: 2.4
+Name: gtfs_railways
+Version: 0.1.4
+Summary: Functions to work on GTFS railways data
+Home-page: https://github.com/Praneesh-Sharma
+Author: Praneesh Sharma
+Author-email: praneesh.sharma@dtsc.be
+Requires-Python: >=3.6
+Requires-Dist: pandas
+Requires-Dist: numpy
+Requires-Dist: bokeh
+Requires-Dist: networkx
+Requires-Dist: matplotlib
+Requires-Dist: geopy
+Requires-Dist: thefuzz
+Requires-Dist: gtfspy
+Requires-Dist: ipython
+Dynamic: author
+Dynamic: author-email
+Dynamic: home-page
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

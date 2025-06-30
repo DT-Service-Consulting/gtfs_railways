@@ -3,7 +3,7 @@ import os
 
 setup(
     name='gtfs_railways',            # Replace with your package name
-    version='0.1.3',
+    version='0.1.4',
     packages=find_packages(),      # Automatically find packages in your folder
     description='Functions to work on GTFS railways data',
     author='Praneesh Sharma',
