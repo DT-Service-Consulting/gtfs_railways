@@ -1,8 +1,0 @@
-pandas
-numpy
-bokeh
-networkx
-matplotlib
-geopy
-thefuzz
-ipython
