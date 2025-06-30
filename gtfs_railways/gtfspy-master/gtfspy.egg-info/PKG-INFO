@@ -1,0 +1,40 @@
+Metadata-Version: 2.4
+Name: gtfspy
+Version: 0.0.4
+Summary: Python package for analyzing public transport timetables
+Home-page: https://github.com/CxAalto/gtfspy
+Author: Rainer Kujala
+Author-email: Rainer.Kujala@gmail.com
+License: MIT
+Keywords: transit,routinggtfs,public transport,analysis,visualization
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: GIS
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.5
+License-File: LICENSE.txt
+Requires-Dist: setuptools>=18.0
+Requires-Dist: pandas
+Requires-Dist: networkx
+Requires-Dist: pyshp
+Requires-Dist: smopy
+Requires-Dist: nose
+Requires-Dist: Cython
+Requires-Dist: six
+Requires-Dist: geoindex
+Requires-Dist: osmread
+Requires-Dist: geojson>=2.0.0
+Requires-Dist: shapely
+Requires-Dist: pyproj
+Requires-Dist: matplotlib-scalebar==0.8.1
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: summary
