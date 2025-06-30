@@ -5,5 +5,4 @@ networkx
 matplotlib
 geopy
 thefuzz
-gtfspy
 ipython

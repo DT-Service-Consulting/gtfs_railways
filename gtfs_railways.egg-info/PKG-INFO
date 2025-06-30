@@ -1,4 +1,4 @@
-Metadata-Version: 2.4
+Metadata-Version: 2.1
 Name: gtfs_railways
 Version: 0.1.4
 Summary: Functions to work on GTFS railways data
@@ -13,11 +13,4 @@ Requires-Dist: networkx
 Requires-Dist: matplotlib
 Requires-Dist: geopy
 Requires-Dist: thefuzz
-Requires-Dist: gtfspy
 Requires-Dist: ipython
-Dynamic: author
-Dynamic: author-email
-Dynamic: home-page
-Dynamic: requires-dist
-Dynamic: requires-python
-Dynamic: summary

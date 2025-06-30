@@ -1,14 +1,13 @@
 from setuptools import setup, find_packages
-import os 
 
 setup(
-    name='gtfs_railways',            # Replace with your package name
+    name='gtfs_railways',
     version='0.1.4',
-    packages=find_packages(),      # Automatically find packages in your folder
+    packages=find_packages(include=['gtfs_railways', 'gtfs_railways.*']),
     description='Functions to work on GTFS railways data',
     author='Praneesh Sharma',
     author_email='praneesh.sharma@dtsc.be',
-    url='https://github.com/Praneesh-Sharma',  # Optional
+    url='https://github.com/Praneesh-Sharma',
     install_requires=[
         'pandas',
         'numpy',
@@ -17,7 +16,6 @@ setup(
         'matplotlib',
         'geopy',
         'thefuzz',
-        'gtfspy',
         'ipython'
     ],
     python_requires='>=3.6',
