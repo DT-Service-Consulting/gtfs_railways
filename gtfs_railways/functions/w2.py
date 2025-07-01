@@ -1,4 +1,4 @@
-from gtfs_railways.utils import mode_from_string, get_routes_for_mode, get_color_per_route
+from gtfs_railways.functions.utils import mode_from_string, get_routes_for_mode, get_color_per_route
 
 import pandas as pd
 import numpy as np
@@ -394,7 +394,7 @@ def targeted_node_removal(g, G, num_to_remove, verbose=False):
     for step in range(num_to_remove):
         start_time = time.perf_counter()
 
-        current_eff = eg_(G)
+        current_eff = eg_(g, G)
         max_drop = -1
         best_node = None
 
