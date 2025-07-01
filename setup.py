@@ -16,7 +16,9 @@ setup(
         'matplotlib',
         'geopy',
         'thefuzz',
-        'ipython'
+        'ipython',
+        'ipykernel',
+        'jupyter'
     ],
     python_requires='>=3.6',
 )
