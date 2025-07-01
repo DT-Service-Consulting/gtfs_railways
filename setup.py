@@ -22,6 +22,7 @@ setup(
     maintainer='Marco Di Gennaro, Praneesh Sharma',
     maintainer_email='marco.digennaro@dtsc.be, praneesh.sharma@dtsc.be',
     url='https://github.com/DT-Service-Consulting/gtfs_railways',
+    license='Apache-2.0',
     project_urls={
         'Homepage': 'https://github.com/DT-Service-Consulting/gtfs_railways',
     },
@@ -37,6 +38,6 @@ setup(
         'pytest'
     ],
     classifiers=[
-        'License :: Apache 2.0',
+        'License :: OSI Approved :: Apache Software License'
     ],
 )
