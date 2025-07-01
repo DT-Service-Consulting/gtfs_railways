@@ -4,9 +4,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent.parent
 
 # Paths to various resources
-SRC_DIR = BASE_DIR / 'src'
-FUNCTION_DIR = SRC_DIR / 'functions'
+FUNCTION_DIR = BASE_DIR / 'functions'
 DATA_DIR = BASE_DIR / 'data'
 GRAPH_DIR = BASE_DIR / 'graphs'
 NB_DIR = BASE_DIR / 'notebooks'
-ENVFILE = BASE_DIR / '.env'
