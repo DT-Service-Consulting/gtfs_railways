@@ -653,7 +653,7 @@ def plot_efficiency_results_from_batch(row):
 
 def compute_avg_runtime_by_num_nodes(df_results):
     """
-    Compute the average runtime and average number of nodes removed for subgraphs grouped by number of nodes.
+    Compute the average and total runtime, and average number of nodes removed for subgraphs grouped by number of nodes.
 
     Parameters:
         df_results (pd.DataFrame): DataFrame with columns:
@@ -665,18 +665,20 @@ def compute_avg_runtime_by_num_nodes(df_results):
         pd.DataFrame: DataFrame with columns:
             - 'num_nodes': number of nodes in each subgraph
             - 'num_nodes_removed': average number of nodes removed
-            - 'avg_runtime_seconds': average runtime (in seconds) for graphs of that size
+            - 'avg_runtime_seconds': average runtime (in seconds)
+            - 'total_runtime_seconds': total runtime for that graph size
     """
     # Add a column for number of removed nodes
     df_results["num_nodes_removed"] = df_results["removed_nodes"].apply(len)
 
-    # Group by 'num_nodes' and compute average runtime and average number of nodes removed
+    # Group by 'num_nodes' and compute averages and totals
     grouped = df_results.groupby("num_nodes").agg(
         num_nodes_removed=("num_nodes_removed", "mean"),
-        avg_runtime_seconds=("runtime_seconds", "mean")
+        avg_runtime_seconds=("runtime_seconds", "mean"),
+        total_runtime_seconds=("runtime_seconds", "sum")
     ).reset_index()
 
-    grouped = grouped[["num_nodes", "num_nodes_removed", "avg_runtime_seconds"]]
+    grouped = grouped[["num_nodes", "num_nodes_removed", "avg_runtime_seconds", "total_runtime_seconds"]]
 
     return grouped
 
