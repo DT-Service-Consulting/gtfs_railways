@@ -2,27 +2,27 @@ import pandas as pd
 import os
 from itertools import islice
 from statistics import mean 
-from gtfspy import import_gtfs, gtfs, networks, route_types, mapviz, util
-from gtfspy.filter import FilterExtract
+from gtfspy import import_gtfs, gtfs, networks
 from bokeh.io import show, export_png
-from bokeh.models import (CDSView, ColorBar, ColumnDataSource,
-                          CustomJS, CustomJSFilter, 
-                          GeoJSONDataSource, HoverTool,
-                          LinearColorMapper, Slider, Circle, 
+from bokeh.models import (ColorBar,
+                          HoverTool,
+                          LinearColorMapper, Circle, 
                           MultiLine, WheelZoomTool,GMapOptions, 
-                          DataRange1d, Button, NodesAndLinkedEdges, EdgesAndLinkedNodes,
+                          DataRange1d, Button, EdgesAndLinkedNodes,
                           ColorBar)
-from bokeh.layouts import column, row,layout
+from bokeh.layouts import column
 from bokeh.palettes import RdYlGn11
-from bokeh.plotting import figure, output_notebook, from_networkx, gmap, curdoc
-from bokeh.tile_providers import CARTODBPOSITRON, get_provider
-from pyproj import Proj, Transformer
+from bokeh.plotting import figure,from_networkx, gmap
+from bokeh.tile_providers import CARTODBPOSITRON
+from pyproj import Transformer
 from collections import Counter
 import networkx as nx
 import pickle
-from thefuzz import fuzz, process
+from thefuzz import fuzz
 import geopy.distance
 from IPython.display import clear_output
+from functools import wraps
+import time
 
 
 # GTFS Modes
@@ -1357,3 +1357,14 @@ def get_events(gtfs_feed,
                                 end_time_ut=range_end,
                                 route_type=mode_from_string(mode))
     return events
+
+def compute_time(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        print(f"Function '{func.__name__}' completed.")
+        print(f"Execution time: {end_time - start_time:.2f} seconds\n")
+        return result
+    return wrapper

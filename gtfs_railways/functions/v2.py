@@ -1,85 +1,14 @@
 from gtfs_railways.functions.utils import mode_from_string, get_routes_for_mode, get_color_per_route
 
 import pandas as pd
-import numpy as np
 import networkx as nx
-from collections import deque
-from functools import wraps
-from IPython.display import display
 import matplotlib.pyplot as plt
 import copy
 import random
 import time
 
-def compute_time(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = time.perf_counter()
-        result = func(*args, **kwargs)
-        end_time = time.perf_counter()
-        print(f"Function '{func.__name__}' completed.")
-        print(f"Execution time: {end_time - start_time:.2f} seconds\n")
-        return result
-    return wrapper
-
-def extract_directed_subgraph(G, target_size, min_edges=3, seed=None):
-    if seed is not None:
-        random.seed(seed)
-
-    nodes = list(G.nodes())
-    random.shuffle(nodes)
-    seen_node_sets = set()
-
-    for seed_node in nodes:
-        visited = set([seed_node])
-        queue = deque([seed_node])
-
-        while queue and len(visited) < target_size:
-            current = queue.popleft()
-            neighbors = list(G.successors(current))
-            random.shuffle(neighbors)
-
-            for neighbor in neighbors:
-                if neighbor not in visited:
-                    visited.add(neighbor)
-                    queue.append(neighbor)
-                if len(visited) == target_size:
-                    break
-
-        if len(visited) == target_size:
-            node_tuple = tuple(sorted(visited))
-            if node_tuple in seen_node_sets:
-                continue
-
-            subG = G.subgraph(visited).copy()
-            if subG.number_of_edges() >= min_edges:
-                seen_node_sets.add(node_tuple)
-                yield subG
-
-def generate_subgraph_batches(G, sizes=(5, 10, 15), num_per_size=10, seed=42, min_edges=3):
-    all_subgraphs = {size: [] for size in sizes}
-    rng = random.Random(seed)
-
-    for size in sizes:
-        count = 0
-        attempt = 0
-        while count < num_per_size and attempt < 1000:
-            sub_seed = rng.randint(0, 100000)
-            for subG in extract_directed_subgraph(G, size, min_edges, seed=sub_seed):
-                all_subgraphs[size].append(subG)
-                count += 1
-                break
-            attempt += 1
-
-        if count < num_per_size:
-            print(f"Warning: Only found {count} subgraphs of size {size} after {attempt} attempts.")
-    
-    return all_subgraphs
-
 
 def get_all_GTC_refactored_(L_space, P_space, k, wait_pen, transfer_pen):
-    import networkx as nx
-
     # Precompute all attributes
     P_veh = nx.get_edge_attributes(P_space, "veh")
     P_wait = nx.get_edge_attributes(P_space, "avg_wait")
