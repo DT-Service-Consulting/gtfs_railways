@@ -11,6 +11,17 @@ import copy
 import random
 import time
 
+def compute_time(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        print(f"Function '{func.__name__}' completed.")
+        print(f"Execution time: {end_time - start_time:.2f} seconds\n")
+        return result
+    return wrapper
+
 def extract_directed_subgraph(G, target_size, min_edges=3, seed=None):
     if seed is not None:
         random.seed(seed)
@@ -64,17 +75,6 @@ def generate_subgraph_batches(G, sizes=(5, 10, 15), num_per_size=10, seed=42, mi
             print(f"Warning: Only found {count} subgraphs of size {size} after {attempt} attempts.")
     
     return all_subgraphs
-
-def compute_time(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = time.perf_counter()
-        result = func(*args, **kwargs)
-        end_time = time.perf_counter()
-        print(f"Function '{func.__name__}' completed.")
-        print(f"Execution time: {end_time - start_time:.2f} seconds\n")
-        return result
-    return wrapper
 
 
 def get_all_GTC_refactored_(L_space, P_space, k, wait_pen, transfer_pen):
