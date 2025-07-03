@@ -2,7 +2,6 @@ from gtfs_railways.functions.utils import mode_from_string, get_routes_for_mode,
 
 import pandas as pd
 import networkx as nx
-import matplotlib.pyplot as plt
 import copy
 import random
 import time
