@@ -21,7 +21,6 @@ import pickle
 from thefuzz import fuzz
 import geopy.distance
 from IPython.display import clear_output
-from functools import wraps
 import time
 import copy
 import random
@@ -1358,17 +1357,6 @@ def get_events(gtfs_feed,
                                 end_time_ut=range_end,
                                 route_type=mode_from_string(mode))
     return events
-
-def compute_time(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = time.perf_counter()
-        result = func(*args, **kwargs)
-        end_time = time.perf_counter()
-        print(f"Function '{func.__name__}' completed.")
-        print(f"Execution time: {end_time - start_time:.2f} seconds\n")
-        return result
-    return wrapper
 
 
 def get_random_removal_nodes(graph, num_to_remove, seed=None):
