@@ -259,6 +259,7 @@ def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
     """
     if seed is not None:
         random.seed(seed)
+
     removal_nodes = random.sample(list(G.nodes()), num_to_remove)
 
     if verbose:
@@ -273,10 +274,10 @@ def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
     for i, node in enumerate(removal_nodes):
         start_time = time.perf_counter()
 
-        # Check if node is already isolated (no incoming or outgoing edges)
+        # Skip if node is already isolated (no edges)
         if G.in_degree(node) == 0 and G.out_degree(node) == 0:
             if verbose:
-                print(f"Step {i + 1}: Node {node} already isolated.")
+                print(f"Step {i + 1}: Node {node} already isolated, skipping.")
             continue
 
         edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
@@ -287,7 +288,7 @@ def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
             eff = eg_(g, G)
         except Exception as e:
             if verbose:
-                print(f"Error after {i + 1} removals: {e}")
+                print(f"Error after removing edges of {node}: {e}")
             break
 
         elapsed = time.perf_counter() - start_time
@@ -302,8 +303,6 @@ def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
             print(f"Time taken: {elapsed:.4f} seconds\n")
 
     return original_efficiency, efficiencies, num_removed, removed_nodes, removal_times
-
-
 
 
 def targeted_node_removal(g, G, num_to_remove, verbose=False):
@@ -329,15 +328,19 @@ def targeted_node_removal(g, G, num_to_remove, verbose=False):
     removed_nodes = []
     removal_times = []
 
-    for step in range(num_to_remove):
+    removals_done = 0
+    step = 0
+
+    while removals_done < num_to_remove:
         start_time = time.perf_counter()
+        step += 1
 
         current_eff = eg_(g, G)
         max_drop = -1
         best_node = None
 
         for node in G.nodes():
-            # Check if node is already isolated (no in or out edges)
+            # Skip isolated nodes
             if G.in_degree(node) == 0 and G.out_degree(node) == 0:
                 continue
 
@@ -357,29 +360,30 @@ def targeted_node_removal(g, G, num_to_remove, verbose=False):
 
         if best_node is None:
             if verbose:
-                print("No valid node to isolate.")
+                print("No valid node to isolate. Stopping early.")
             break
 
         edges_to_remove = list(G.in_edges(best_node)) + list(G.out_edges(best_node))
         G.remove_edges_from(edges_to_remove)
         removed_nodes.append(best_node)
+        removals_done += 1
 
         try:
             eff = eg_(g, G)
         except Exception as e:
             if verbose:
-                print(f"Error after {step + 1} steps: {e}")
+                print(f"Error after {removals_done} removals: {e}")
             break
 
         elapsed = time.perf_counter() - start_time
         normalized_eff = eff / original_efficiency
 
         efficiencies.append(normalized_eff)
-        num_removed.append(step + 1)
+        num_removed.append(removals_done)
         removal_times.append(round(elapsed, 4))
 
         if verbose:
-            print(f"Step {step + 1}: Removed edges of {best_node} → Normalized Efficiency: {normalized_eff:.4f}")
+            print(f"Step {step}: Removed edges of {best_node} → Normalized Efficiency: {normalized_eff:.4f}")
             print(f"Time taken: {elapsed:.4f} seconds\n")
 
     return original_efficiency, efficiencies, num_removed, removed_nodes, removal_times
@@ -408,29 +412,33 @@ def betweenness_node_removal(g, G, num_to_remove, verbose=False):
     removed_nodes = []
     removal_times = []
 
-    for step in range(num_to_remove):
+    removals_done = 0
+    step = 0
+
+    while removals_done < num_to_remove:
+        step += 1
         start_time = time.perf_counter()
 
         try:
             centrality = nx.betweenness_centrality(G, weight='duration_avg')
         except Exception as e:
             if verbose:
-                print(f"Failed to compute betweenness at step {step + 1}: {e}")
+                print(f"Failed to compute betweenness at step {step}: {e}")
             break
+
+        # Remove isolated nodes from consideration
+        centrality = {
+            node: cent for node, cent in centrality.items()
+            if (G.is_directed() and (G.in_degree(node) > 0 or G.out_degree(node) > 0)) or
+               (not G.is_directed() and G.degree(node) > 0)
+        }
 
         if not centrality:
             if verbose:
-                print("No centrality values computed. Possibly empty graph.")
+                print("No non-isolated nodes left to remove.")
             break
 
         node_to_remove = max(centrality, key=centrality.get)
-
-        # Check if node is already isolated
-        if (G.is_directed() and G.in_degree(node_to_remove) == 0 and G.out_degree(node_to_remove) == 0) or \
-           (not G.is_directed() and G.degree(node_to_remove) == 0):
-            if verbose:
-                print(f"Step {step + 1}: Node {node_to_remove} already isolated.")
-            continue
 
         # Remove all edges connected to the node
         if G.is_directed():
@@ -440,6 +448,7 @@ def betweenness_node_removal(g, G, num_to_remove, verbose=False):
             G.remove_edges_from(list(G.edges(node_to_remove)))
 
         removed_nodes.append(node_to_remove)
+        removals_done += 1
 
         try:
             eff = eg_(g, G)
@@ -452,17 +461,15 @@ def betweenness_node_removal(g, G, num_to_remove, verbose=False):
         normalized_eff = eff / original_efficiency
 
         efficiencies.append(normalized_eff)
-        num_removed.append(step + 1)
+        num_removed.append(removals_done)
         removal_times.append(round(elapsed, 4))
 
         if verbose:
-            print(f"Step {step + 1}: Removed edges of {node_to_remove} (Centrality: {centrality[node_to_remove]:.4f})")
+            print(f"Step {step}: Removed edges of {node_to_remove} (Centrality: {centrality[node_to_remove]:.4f})")
             print(f"Normalized Efficiency: {normalized_eff:.4f}")
             print(f"Time taken: {elapsed:.4f} seconds\n")
 
     return original_efficiency, efficiencies, num_removed, removed_nodes, removal_times
-
-
 
 
 def simulate_fixed_node_removal_efficiency(
@@ -470,13 +477,13 @@ def simulate_fixed_node_removal_efficiency(
     L_graph,
     num_to_remove=None,
     pct_to_remove=None,  # priority over num_to_remove
-    method='random', # random or targeted or betweenness
+    method='random',  # random or targeted or betweenness
     seed=None,
     verbose=False
 ):
     """
     Simulates the impact of fixed sequential node removals on the global efficiency of a graph.
-    
+
     Parameters:
         L_graph (networkx.Graph): The subgraph from which nodes will be removed.
         num_to_remove (int, optional): Number of nodes to remove. Ignored if percentage is given.
@@ -494,6 +501,12 @@ def simulate_fixed_node_removal_efficiency(
     elif num_to_remove is None:
         raise ValueError("You must specify either num_to_remove or percentage.")
 
+    if num_to_remove > total_nodes:
+        print(f"Requested number of nodes to remove ({num_to_remove}) exceeds total nodes ({total_nodes}).")
+        num_to_remove = max(total_nodes - 2, 1)
+        if verbose:
+            print(f"Adjusting number of nodes to remove to {num_to_remove}.")
+
     if method == "random":
         return random_node_removal(g, G, num_to_remove, seed, verbose)
     elif method == "targeted":
@@ -501,7 +514,7 @@ def simulate_fixed_node_removal_efficiency(
     elif method == "betweenness":
         return betweenness_node_removal(g, G, num_to_remove, verbose)
     else:
-        raise ValueError("Invalid method. Choose 'random' or 'targeted'.")
+        raise ValueError("Invalid method. Choose 'random' or 'targeted' or 'betweenness'.")
 
 
 def run_removal_simulations(g, subgraphs_by_size, num_to_remove=None, pct_to_remove=None, method='random', seed=42, verbose=False):
