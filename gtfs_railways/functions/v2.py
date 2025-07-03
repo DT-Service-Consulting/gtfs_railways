@@ -266,8 +266,10 @@ def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
         print(f"Random removal order: {removal_nodes}")
 
     original_efficiency = eg_(g, G)
-    efficiencies = []
-    num_removed = []
+    if verbose:
+        print(f"Original Efficiency: {original_efficiency}")
+    efficiencies = [1.0]
+    num_removed = [0]
     removed_nodes = []
     removal_times = []
 
@@ -278,6 +280,8 @@ def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
         if G.in_degree(node) == 0 and G.out_degree(node) == 0:
             if verbose:
                 print(f"Step {i + 1}: Node {node} already isolated, skipping.")
+            efficiencies.append(efficiencies[-1])
+            num_removed.append(num_removed[-1])
             continue
 
         edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
@@ -323,8 +327,10 @@ def targeted_node_removal(g, G, num_to_remove, verbose=False):
         removal_times (list of float): Time taken (in seconds) for each step.
     """
     original_efficiency = eg_(g, G)
-    efficiencies = []
-    num_removed = []
+    if verbose:
+        print(f"Original Efficiency: {original_efficiency}")
+    efficiencies = [1.0]
+    num_removed = [0]
     removed_nodes = []
     removal_times = []
 
@@ -407,8 +413,10 @@ def betweenness_node_removal(g, G, num_to_remove, verbose=False):
         removal_times (list of float): Time taken (in seconds) for each step.
     """
     original_efficiency = eg_(g, G)
-    efficiencies = []
-    num_removed = []
+    if verbose:
+        print(f"Original Efficiency: {original_efficiency}")
+    efficiencies = [1.0]
+    num_removed = [0]
     removed_nodes = []
     removal_times = []
 
