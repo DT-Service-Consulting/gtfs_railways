@@ -94,24 +94,6 @@ def simulate_fixed_node_removal_efficiency(
 
     return efficiencies, num_removed, removed_nodes
 
-def plot_efficiency_results(num_removed, efficiencies, title="Impact of Node Removal on Normalized Network Efficiency"):
-    """
-    Plots the change in normalized efficiency as nodes are removed.
-
-    Parameters:
-    - num_removed: List of number of nodes removed
-    - efficiencies: Corresponding list of normalized efficiencies
-    - title: Plot title
-    """
-    plt.figure(figsize=(10, 6))
-    plt.plot(num_removed, efficiencies, marker='o')
-    plt.xlabel("Number of Nodes Removed")
-    plt.ylabel("Normalized Efficiency")
-    plt.title(title)
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
 def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
     """
     Removes nodes from the graph in a random order and tracks the impact on global efficiency.
