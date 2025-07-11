@@ -7,7 +7,11 @@ import random
 import time
 
 
-def get_all_GTC_refactored_(L_space, P_space, k, wait_pen, transfer_pen):
+def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
+
+    """
+    Used to be get_all_GTC_refactored_
+    """
     # Precompute all attributes
     P_veh = nx.get_edge_attributes(P_space, "veh")
     P_wait = nx.get_edge_attributes(P_space, "avg_wait")
@@ -93,7 +97,7 @@ def get_all_GTC_refactored_(L_space, P_space, k, wait_pen, transfer_pen):
 
     return shortest_paths
 
-def P_space_(g, L, mode, start_hour=5, end_hour=24, dir_indicator=None):
+def P_space(g, L, mode, start_hour=5, end_hour=24, dir_indicator=None):
     '''
     Create P-space graph given:
     g: gtfs feed
