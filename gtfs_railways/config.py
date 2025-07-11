@@ -10,3 +10,4 @@ GRAPH_DIR = BASE_DIR / 'graphs'
 NB_DIR = BASE_DIR / 'notebooks'
 SETUP_PATH = BASE_DIR / 'setup.py'
 EXAMPLES_DIR = BASE_DIR / 'examples'
+SETUP_PATH = BASE_DIR

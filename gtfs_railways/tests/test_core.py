@@ -5,7 +5,7 @@ import gtfspy
 from gtfs_railways.functions.core import load_gtfs, load_graph
 from gtfs_railways.functions.v1 import P_space
 import networkx as nx
-from gtfs_railways.config import EXAMPLES_DIR
+from gtfs_railways.config import EXAMPLES_DIR, DATA_DIR
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def L_space_20_path():
 
 @pytest.fixture
 def attributes_path():
-    return "/Users/marco/Library/CloudStorage/OneDrive-DTServicesandConsultingSRL/BRAIN/PROJECTS/Railways_Resilience/belgium 1.sqlite"
+    return str( DATA_DIR / "sqlite/belgium.sqlite" )
 
 def test_load_gtfs(attributes_path):
     attributes = load_gtfs(attributes_path)

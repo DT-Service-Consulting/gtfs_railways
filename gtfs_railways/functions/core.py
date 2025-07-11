@@ -24,15 +24,18 @@ def load_graph(path):
         return G
 
 def efficiency_graph(L, sp):
-
     eg = 0
     for n1 in sorted(L.nodes()):
         for n2 in sorted(L.nodes()):
             if n1 != n2:
-                if sp[n1][n2]:
-                    tt = sp[n1][n2]["GTC"]
-                    eg += 1 / tt
-
+                try:
+                    entry_list = sp[n1][n2]
+                    if isinstance(entry_list, list) and entry_list:
+                        gtc = entry_list[0].get("GTC")
+                        if gtc and gtc > 0:
+                            eg += 1 / gtc
+                except KeyError:
+                    continue  # skip if no path
     return eg / (L.number_of_nodes() * (L.number_of_nodes() - 1))
 
 def simulate_fixed_node_removal_efficiency(

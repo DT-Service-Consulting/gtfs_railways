@@ -198,3 +198,5 @@ cython_debug/
 .AppleDouble
 .LSOverride
 
+sqlite/
+tmp_routing_test_data
