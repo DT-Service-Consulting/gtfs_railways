@@ -86,14 +86,7 @@ def mode_from_string(mode_str):
     return mode_code[mode_str]
 
 #####################################################
-def load_gtfs(imported_database_path, gtfs_path=None, name=""):
-    if not os.path.exists(imported_database_path):  # reimport only if the imported database does not already exist
-        print("Importing gtfs zip file")
-        import_gtfs.import_gtfs([gtfs_path],  # input: list of GTFS zip files (or directories)
-                                imported_database_path,  # output: where to create the new sqlite3 database
-                                print_progress=True,  # whether to print progress when importing data
-                                location_name=name)
-    return gtfs.GTFS(imported_database_path)
+
     
 def load_sqlite(imported_database_path):
     return gtfs.GTFS(imported_database_path)

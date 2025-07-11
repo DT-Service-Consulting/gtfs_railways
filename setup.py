@@ -34,7 +34,8 @@ setup(
         'geopy',
         'thefuzz',
         'ipython',
-        'pytest'
+        'pytest',
+        'pytest-cov'
     ],
     classifiers=[
         'License :: Apache 2.0',
