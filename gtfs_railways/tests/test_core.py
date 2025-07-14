@@ -54,4 +54,3 @@ def test_P_space(L_space_10_path, L_space_20_path, attributes_path):
     assert P_graph.number_of_nodes() == L_20_graph.number_of_nodes()
     assert P_graph.number_of_nodes() == 20
     assert P_graph.number_of_edges() == 256
-
