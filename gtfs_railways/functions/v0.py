@@ -2,28 +2,28 @@ import pandas as pd
 import os
 from itertools import islice
 from statistics import mean 
-from gtfspy import import_gtfs, gtfs, networks
+from gtfspy import import_gtfs, gtfs, networks, route_types, mapviz, util
+from gtfspy.filter import FilterExtract
 from bokeh.io import show, export_png
-from bokeh.models import (ColorBar,
-                          HoverTool,
-                          LinearColorMapper, Circle, 
+from bokeh.models import (CDSView, ColorBar, ColumnDataSource,
+                          CustomJS, CustomJSFilter, 
+                          GeoJSONDataSource, HoverTool,
+                          LinearColorMapper, Slider, Circle, 
                           MultiLine, WheelZoomTool,GMapOptions, 
-                          DataRange1d, Button, EdgesAndLinkedNodes,
+                          DataRange1d, Button, NodesAndLinkedEdges, EdgesAndLinkedNodes,
                           ColorBar)
-from bokeh.layouts import column
+from bokeh.layouts import column, row,layout
 from bokeh.palettes import RdYlGn11
-from bokeh.plotting import figure,from_networkx, gmap
-from bokeh.tile_providers import CARTODBPOSITRON
-from pyproj import Transformer
+from bokeh.plotting import figure, output_notebook, from_networkx, gmap, curdoc
+from bokeh.tile_providers import CARTODBPOSITRON, get_provider
+from pyproj import Proj, Transformer
 from collections import Counter
 import networkx as nx
 import pickle
-from thefuzz import fuzz
+from thefuzz import fuzz, process
 import geopy.distance
 from IPython.display import clear_output
-import time
-import copy
-import random
+
 
 # GTFS Modes
 mode_name={0: 'Tram',
@@ -86,7 +86,14 @@ def mode_from_string(mode_str):
     return mode_code[mode_str]
 
 #####################################################
-
+def load_gtfs(imported_database_path, gtfs_path=None, name=""):
+    if not os.path.exists(imported_database_path):  # reimport only if the imported database does not already exist
+        print("Importing gtfs zip file")
+        import_gtfs.import_gtfs([gtfs_path],  # input: list of GTFS zip files (or directories)
+                                imported_database_path,  # output: where to create the new sqlite3 database
+                                print_progress=True,  # whether to print progress when importing data
+                                location_name=name)
+    return gtfs.GTFS(imported_database_path)
     
 def load_sqlite(imported_database_path):
     return gtfs.GTFS(imported_database_path)
@@ -866,6 +873,11 @@ def save_graph(G,path):
         pickle.dump(G_res, f)
     
 
+def load_graph(path):
+    #return nx.read_gpickle(path)
+    with open(path, 'rb') as f:
+        G = pickle.load(f)
+        return G
 
 # Method to get the routeids of the subway lines
 def get_routes_for_mode(g, mode):
@@ -1074,11 +1086,123 @@ def get_routes_dirs(P_space, n1, n2):
             orig_routes.append(str(ro) + str(dr))
     return orig_routes
 
-
 def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
+    
+    # Initialize a dictionary containing all shortest path information, indexed by node pairs
+    shortest_paths = dict()
+    
+    # Loop through all node combinations
+    for n1 in L_space.nodes:
+        if n1%10==0:
+        	print("%d/%d"%(n1,len(L_space.nodes)))
+        
+        shortest_paths[n1] = {}
+        
+        for n2 in L_space.nodes:
 
-    """renamed from get_all_GTC_refactored"""
+            # Exclude self-loops
+            if n1 == n2:
+                continue
 
+            #print("Considering the path between", n1, "and", n2)
+            
+            # Retrieve the k shortest paths from L-space, using travel time/duration as a weight
+            k_paths = k_shortest_paths(L_space, n1, n2, k,'duration_avg')
+            
+            # Two auxiliary datastructures to store the different shortest paths and corresponding attributes
+            tt_paths = []
+            only_tts = []
+
+            #print("Discovered", len(k_paths), "shortest paths")
+
+            # Loop through all k-shortest paths and record the different travel time components
+            for p in k_paths:
+
+                # Record the original route/line taken from the origin node
+                #orig_routes = get_routes_dirs(P_space, p[0], p[1])
+                #prev_routes = get_routes_dirs(P_space, p[0], p[1])
+                possible_routes= get_routes_dirs(P_space, p[0], p[1])
+                
+                # Initialize the distance, (in-vehicle) travel time, waiting time and number of transfers as 0
+                dist = 0
+                tt = 0
+                wait = 0
+                tf = 0
+                
+                # Record the list of transfer stations, having the origin as the first "transfer station"
+                t_stations = [n1]
+
+                # Check the routes of all successive node pairs in the path,
+                # if all routes of the original edge are not on the next edge, a transfer must have been made OR
+                # if all routes of the previous edge are not on the next edge, a transfer must have been made
+                # Route(s) on that edge become new route.
+                # Also update the in-vehicle travel time for each edge passed.
+                for l1, l2 in zip(p[::1], p[1::1]):
+                    tt += L_space[l1][l2]['duration_avg']
+                    dist += L_space[l1][l2]['d']
+                    routes = get_routes_dirs(P_space, l1, l2)
+                    possible_routes=set(possible_routes).intersection(set(routes))
+                    #if set(orig_routes).isdisjoint(routes) or set(prev_routes).isdisjoint(routes):
+                    if not possible_routes:
+                        possible_routes = routes
+                        tf +=1
+                        t_stations.append(l1)
+                    #prev_routes = get_routes_dirs(P_space, l1, l2)
+                
+                # Add the destination node as the final transfer station
+                t_stations.append(n2)
+
+                # Change travel time to minutes and round to whole minutes
+                tt = round(tt / 60)
+                
+                #print("Path:", p, "with", tf, "transfer(s) at", t_stations)
+                
+                # Find the waiting times belonging to the different routes taken by looping through all transfer station pairs
+                for t1, t2 in zip(t_stations[::1], t_stations[1::1]):
+                    wait += P_space[t1][t2]['avg_wait']
+                
+                # Round the waiting time to whole minutes
+                wait = round(wait)
+                
+                
+               #print("Total path length is: tt:", tt, "min, waiting time:", wait, "min, with", tf, "transfers \n")
+
+                # Calculate the total travel time, take a penalty for the waiting time and per transfer
+                transfer_cost=sum([transfer_pen[i] if i<len(transfer_pen) else transfer_pen[-1] for i in range(tf)])
+                total_tt = tt + wait * wait_pen + transfer_cost
+                #total_tt = tt + wait * wait_pen + tf * transfer_pen
+                only_tts.append(total_tt)
+                tt_paths.append({'path': p, 'GTC': total_tt, 'in_vehicle': tt, 'waiting_time': wait, 'n_transfers': tf, 'traveled_distance': dist})
+
+            
+            if k_paths:
+            	shortest_paths[n1][n2]=sorted(tt_paths, key=lambda x: x["GTC"])
+            else:
+                shortest_paths[n1][n2]=[]
+            
+                # Find the path with the shortest total travel time
+                #min_path_tt = min(only_tts)
+                #min_path = tt_paths[only_tts.index(min_path_tt)]
+
+                #print("Shortest path is:", min_path, "\n")
+
+                # Record that path as the shortest path belonging to nodes n1 and n2
+                #shortest_paths[n1][n2] = min_path
+
+                # Find the geodesic distance between the two nodes
+                #x1 = L_space.nodes[n1]['lat']
+                #y1 = L_space.nodes[n1]['lon']
+                #x2 = L_space.nodes[n2]['lat']
+                #y2 = L_space.nodes[n2]['lon']
+
+                #crow_dist = round(distance(L_space, n1, n2))
+                #shortest_paths[n1][n2]['crow_dist'] = crow_dist
+    
+    print("All GTC computed!")
+    return shortest_paths
+    
+    
+def get_all_GTC_refactored(L_space, P_space, k, wait_pen, transfer_pen):
     #Precompute all attributes
     P_veh=nx.get_edge_attributes(P_space,"veh")
     P_wait=nx.get_edge_attributes(P_space,"avg_wait")
@@ -1234,311 +1358,3 @@ def get_events(gtfs_feed,
                                 end_time_ut=range_end,
                                 route_type=mode_from_string(mode))
     return events
-
-
-def get_random_removal_nodes(graph, num_to_remove, seed=None):
-    """
-    Returns a list of nodes randomly selected from G for removal.
-
-    Parameters:
-    - G: NetworkX graph
-    - num_to_remove: Number of nodes to remove (int)
-    - seed: Optional random seed for reproducibility (int or None)
-
-    Returns:
-    - List of node IDs selected for removal
-    """
-    if num_to_remove > graph.number_of_nodes() - 2:
-        raise ValueError("Cannot remove all or almost all nodes. Reduce 'num_to_remove'.")
-
-    if seed is not None:
-        random.seed(seed)
-
-    return random.sample(list(graph.nodes()), num_to_remove)
-
-
-def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
-    """
-    Removes edges connected to nodes in a random order and tracks the impact on global efficiency.
-    The nodes themselves remain in the graph.
-
-    Parameters:
-        G (networkx.Graph): The input graph to modify (passed by reference).
-        num_to_remove (int): Number of nodes whose edges will be removed.
-        seed (int, optional): Seed for reproducible random node selection.
-        verbose (bool): Whether to print detailed logs during execution.
-
-    Returns:
-        original_efficiency (float): The initial global efficiency before any removals.
-        efficiencies (list of float): Normalized global efficiencies after each removal.
-        num_removed (list of int): Step count corresponding to each edge-removal step.
-        removed_nodes (list of node): List of nodes whose edges were removed in the order of removal.
-        removal_times (list of float): Time taken (in seconds) for each removal step.
-    """
-    if seed is not None:
-        random.seed(seed)
-
-    removal_nodes = random.sample(list(G.nodes()), num_to_remove)
-
-    if verbose:
-        print(f"Random removal order: {removal_nodes}")
-
-    original_efficiency = eg(g, G)
-    if verbose:
-        print(f"Original Efficiency: {original_efficiency}")
-    efficiencies = [1.0]
-    num_removed = [0]
-    removed_nodes = []
-    removal_times = []
-
-    for i, node in enumerate(removal_nodes):
-        start_time = time.perf_counter()
-
-        # Skip if node is already isolated (no edges)
-        if G.in_degree(node) == 0 and G.out_degree(node) == 0:
-            if verbose:
-                print(f"Step {i + 1}: Node {node} already isolated, skipping.")
-            efficiencies.append(efficiencies[-1])
-            num_removed.append(num_removed[-1])
-            continue
-
-        edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
-        G.remove_edges_from(edges_to_remove)
-        removed_nodes.append(node)
-
-        try:
-            eff = eg(g, G)
-        except Exception as e:
-            if verbose:
-                print(f"Error after removing edges of {node}: {e}")
-            break
-
-        elapsed = time.perf_counter() - start_time
-        normalized_eff = eff / original_efficiency
-
-        efficiencies.append(normalized_eff)
-        num_removed.append(i + 1)
-        removal_times.append(round(elapsed, 4))
-
-        if verbose:
-            print(f"Removed edges of {node} → Normalized Efficiency: {normalized_eff:.4f}")
-            print(f"Time taken: {elapsed:.4f} seconds\n")
-
-    return original_efficiency, efficiencies, num_removed, removed_nodes, removal_times
-
-
-def targeted_node_removal(g, G, num_to_remove, verbose=False):
-    """
-    Removes edges connected to nodes using a greedy strategy that selects the node whose edge
-    removal results in the largest drop in global efficiency at each step. The node itself is retained.
-
-    Parameters:
-        G (networkx.Graph): The input graph to modify (passed by reference).
-        num_to_remove (int): Number of nodes whose edges will be removed.
-        verbose (bool): Whether to print detailed logs including time per step.
-
-    Returns:
-        original_efficiency (float): The initial global efficiency before any removals.
-        efficiencies (list of float): Normalized global efficiencies after each removal.
-        num_removed (list of int): Step count corresponding to each edge-removal step.
-        removed_nodes (list of node): List of nodes whose edges were removed.
-        removal_times (list of float): Time taken (in seconds) for each step.
-    """
-    original_efficiency = eg(g, G)
-    if verbose:
-        print(f"Original Efficiency: {original_efficiency}")
-    efficiencies = [1.0]
-    num_removed = [0]
-    removed_nodes = []
-    removal_times = []
-
-    removals_done = 0
-    step = 0
-
-    while removals_done < num_to_remove:
-        start_time = time.perf_counter()
-        step += 1
-
-        current_eff = eg(g, G)
-        max_drop = -1
-        best_node = None
-
-        for node in G.nodes():
-            # Skip isolated nodes
-            if G.in_degree(node) == 0 and G.out_degree(node) == 0:
-                continue
-
-            temp_G = G.copy()
-            edges_to_remove = list(temp_G.in_edges(node)) + list(temp_G.out_edges(node))
-            temp_G.remove_edges_from(edges_to_remove)
-
-            try:
-                eff = eg(g, temp_G)
-            except:
-                continue
-
-            drop = current_eff - eff
-            if drop > max_drop:
-                max_drop = drop
-                best_node = node
-
-        if best_node is None:
-            if verbose:
-                print("No valid node to isolate. Stopping early.")
-            break
-
-        edges_to_remove = list(G.in_edges(best_node)) + list(G.out_edges(best_node))
-        G.remove_edges_from(edges_to_remove)
-        removed_nodes.append(best_node)
-        removals_done += 1
-
-        try:
-            eff = eg(g, G)
-        except Exception as e:
-            if verbose:
-                print(f"Error after {removals_done} removals: {e}")
-            break
-
-        elapsed = time.perf_counter() - start_time
-        normalized_eff = eff / original_efficiency
-
-        efficiencies.append(normalized_eff)
-        num_removed.append(removals_done)
-        removal_times.append(round(elapsed, 4))
-
-        if verbose:
-            print(f"Step {step}: Removed edges of {best_node} → Normalized Efficiency: {normalized_eff:.4f}")
-            print(f"Time taken: {elapsed:.4f} seconds\n")
-
-    return original_efficiency, efficiencies, num_removed, removed_nodes, removal_times
-
-
-def betweenness_node_removal(g, G, num_to_remove, verbose=False):
-    """
-    Removes edges connected to nodes in descending order of weighted betweenness centrality
-    and tracks the impact on global efficiency. The nodes themselves are retained.
-
-    Parameters:
-        G (networkx.Graph): The input graph to modify (passed by reference).
-        num_to_remove (int): Number of nodes whose edges will be removed.
-        verbose (bool): Whether to print detailed logs during execution.
-
-    Returns:
-        original_efficiency (float): The initial global efficiency before any removals.
-        efficiencies (list of float): Normalized global efficiencies after each removal.
-        num_removed (list of int): Step count corresponding to each edge-removal step.
-        removed_nodes (list of node): List of nodes whose edges were removed in order.
-        removal_times (list of float): Time taken (in seconds) for each step.
-    """
-    original_efficiency = eg(g, G)
-    if verbose:
-        print(f"Original Efficiency: {original_efficiency}")
-    efficiencies = [1.0]
-    num_removed = [0]
-    removed_nodes = []
-    removal_times = []
-
-    removals_done = 0
-    step = 0
-
-    while removals_done < num_to_remove:
-        step += 1
-        start_time = time.perf_counter()
-
-        try:
-            centrality = nx.betweenness_centrality(G, weight='duration_avg')
-        except Exception as e:
-            if verbose:
-                print(f"Failed to compute betweenness at step {step}: {e}")
-            break
-
-        # Remove isolated nodes from consideration
-        centrality = {
-            node: cent for node, cent in centrality.items()
-            if (G.is_directed() and (G.in_degree(node) > 0 or G.out_degree(node) > 0)) or
-               (not G.is_directed() and G.degree(node) > 0)
-        }
-
-        if not centrality:
-            if verbose:
-                print("No non-isolated nodes left to remove.")
-            break
-
-        node_to_remove = max(centrality, key=centrality.get)
-
-        # Remove all edges connected to the node
-        if G.is_directed():
-            edges_to_remove = list(G.in_edges(node_to_remove)) + list(G.out_edges(node_to_remove))
-            G.remove_edges_from(edges_to_remove)
-        else:
-            G.remove_edges_from(list(G.edges(node_to_remove)))
-
-        removed_nodes.append(node_to_remove)
-        removals_done += 1
-
-        try:
-            eff = eg(g, G)
-        except Exception as e:
-            if verbose:
-                print(f"Error after removing edges of {node_to_remove}: {e}")
-            break
-
-        elapsed = time.perf_counter() - start_time
-        normalized_eff = eff / original_efficiency
-
-        efficiencies.append(normalized_eff)
-        num_removed.append(removals_done)
-        removal_times.append(round(elapsed, 4))
-
-        if verbose:
-            print(f"Step {step}: Removed edges of {node_to_remove} (Centrality: {centrality[node_to_remove]:.4f})")
-            print(f"Normalized Efficiency: {normalized_eff:.4f}")
-            print(f"Time taken: {elapsed:.4f} seconds\n")
-
-    return original_efficiency, efficiencies, num_removed, removed_nodes, removal_times
-
-
-def simulate_fixed_node_removal_efficiency(
-    g,
-    L_graph,
-    num_to_remove=None,
-    pct_to_remove=None,  # priority over num_to_remove
-    method='random',  # random or targeted or betweenness
-    seed=None,
-    verbose=False
-):
-    """
-    Simulates the impact of fixed sequential node removals on the global efficiency of a graph.
-
-    Parameters:
-        L_graph (networkx.Graph): The subgraph from which nodes will be removed.
-        num_to_remove (int, optional): Number of nodes to remove. Ignored if percentage is given.
-        pct_to_remove (int, optional): Percentage of nodes to remove (between 1 and 100).
-        seed (int, optional): Random seed for node selection.
-        verbose (bool): Whether to print progress and debug information.
-    """
-    G = copy.deepcopy(L_graph)
-    total_nodes = G.number_of_nodes()
-
-    if pct_to_remove is not None:
-        if not (1 <= pct_to_remove <= 100):
-            raise ValueError("Percentage must be an integer between 1 and 100.")
-        num_to_remove = int(total_nodes * (pct_to_remove / 100))
-    elif num_to_remove is None:
-        raise ValueError("You must specify either num_to_remove or percentage.")
-
-    if num_to_remove > total_nodes:
-        print(f"Requested number of nodes to remove ({num_to_remove}) exceeds total nodes ({total_nodes}).")
-        num_to_remove = max(total_nodes - 2, 1)
-        if verbose:
-            print(f"Adjusting number of nodes to remove to {num_to_remove}.")
-
-    if method == "random":
-        return random_node_removal(g, G, num_to_remove, seed, verbose)
-    elif method == "targeted":
-        return targeted_node_removal(g, G, num_to_remove, verbose)
-    elif method == "betweenness":
-        return betweenness_node_removal(g, G, num_to_remove, verbose)
-    else:
-        raise ValueError("Invalid method. Choose 'random' or 'targeted' or 'betweenness'.")
-

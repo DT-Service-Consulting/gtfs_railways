@@ -388,3 +388,5 @@ def run_removal_simulations(g, subgraphs_by_size, num_to_remove=None, pct_to_rem
             results.append(result)
 
     return pd.DataFrame(results)
+
+
