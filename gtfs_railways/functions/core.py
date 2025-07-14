@@ -8,6 +8,8 @@ import pickle
 import os
 from gtfspy import import_gtfs, gtfs, networks
 import networkx as nx
+import random
+import pandas as pd
 
 def load_gtfs(imported_database_path, gtfs_path=None, name=""):
     if not os.path.exists(imported_database_path):  # reimport only if the imported database does not already exist
@@ -26,18 +28,34 @@ def load_graph(path):
 
 def efficiency_graph(L, sp):
     eg = 0
+    count = 0
     for n1 in sorted(L.nodes()):
         for n2 in sorted(L.nodes()):
-            if n1 != n2:
-                try:
-                    entry_list = sp[n1][n2]
-                    if isinstance(entry_list, list) and entry_list:
-                        gtc = entry_list[0].get("GTC")
-                        if gtc and gtc > 0:
-                            eg += 1 / gtc
-                except KeyError:
-                    continue  # skip if no path
-    return eg / (L.number_of_nodes() * (L.number_of_nodes() - 1))
+            if n1 != n2 and n1 in sp and n2 in sp[n1]:
+                val = sp[n1][n2]
+
+                # Case 1: v0 – value is a dict with "GTC"
+                if isinstance(val, dict) and "GTC" in val:
+                    gtc = val["GTC"]
+                    if gtc > 0:
+                        eg += 1 / gtc
+                        count += 1
+
+                # Case 2: v1/v2 – value is a non-empty list of dicts
+                elif isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict) and "GTC" in val[0]:
+                    gtc = val[0]["GTC"]
+                    if gtc > 0:
+                        eg += 1 / gtc
+                        count += 1
+
+                else:
+                    raise ValueError(f"Unexpected structure at sp[{n1}][{n2}]: {val}")
+
+    if count == 0:
+        raise ZeroDivisionError("No valid GTC values found for any node pair.")
+
+    return eg / count
+
 
 def simulate_fixed_node_removal_efficiency(
     g,
@@ -109,7 +127,7 @@ def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
     if verbose:
         print(f"Random removal order: {removal_nodes}")
 
-    original_efficiency = eg_(g, G)
+    original_efficiency = efficiency_graph(g, G)
     if verbose:
         print(f"Original Efficiency: {original_efficiency}")
     efficiencies = [1.0]
@@ -133,7 +151,7 @@ def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
         removed_nodes.append(node)
 
         try:
-            eff = eg_(g, G)
+            eff = efficiency_graph(g, G)
         except Exception as e:
             if verbose:
                 print(f"Error after removing edges of {node}: {e}")
@@ -170,7 +188,7 @@ def targeted_node_removal(g, G, num_to_remove, verbose=False):
         removed_nodes (list of node): List of nodes whose edges were removed.
         removal_times (list of float): Time taken (in seconds) for each step.
     """
-    original_efficiency = eg_(g, G)
+    original_efficiency = efficiency_graph(g, G)
     if verbose:
         print(f"Original Efficiency: {original_efficiency}")
     efficiencies = [1.0]
@@ -185,7 +203,7 @@ def targeted_node_removal(g, G, num_to_remove, verbose=False):
         start_time = time.perf_counter()
         step += 1
 
-        current_eff = eg_(g, G)
+        current_eff = efficiency_graph(g, G)
         max_drop = -1
         best_node = None
 
@@ -199,7 +217,7 @@ def targeted_node_removal(g, G, num_to_remove, verbose=False):
             temp_G.remove_edges_from(edges_to_remove)
 
             try:
-                eff = eg_(g, temp_G)
+                eff = efficiency_graph(g, temp_G)
             except:
                 continue
 
@@ -219,7 +237,7 @@ def targeted_node_removal(g, G, num_to_remove, verbose=False):
         removals_done += 1
 
         try:
-            eff = eg_(g, G)
+            eff = efficiency_graph(g, G)
         except Exception as e:
             if verbose:
                 print(f"Error after {removals_done} removals: {e}")
@@ -256,7 +274,7 @@ def betweenness_node_removal(g, G, num_to_remove, verbose=False):
         removed_nodes (list of node): List of nodes whose edges were removed in order.
         removal_times (list of float): Time taken (in seconds) for each step.
     """
-    original_efficiency = eg_(g, G)
+    original_efficiency = efficiency_graph(g, G)
     if verbose:
         print(f"Original Efficiency: {original_efficiency}")
     efficiencies = [1.0]
@@ -303,7 +321,7 @@ def betweenness_node_removal(g, G, num_to_remove, verbose=False):
         removals_done += 1
 
         try:
-            eff = eg_(g, G)
+            eff = efficiency_graph(g, G)
         except Exception as e:
             if verbose:
                 print(f"Error after removing edges of {node_to_remove}: {e}")
@@ -388,5 +406,3 @@ def run_removal_simulations(g, subgraphs_by_size, num_to_remove=None, pct_to_rem
             results.append(result)
 
     return pd.DataFrame(results)
-
-

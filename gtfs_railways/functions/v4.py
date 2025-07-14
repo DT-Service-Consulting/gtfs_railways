@@ -1,7 +1,7 @@
 from gtfs_railways.functions.utils import mode_from_string, get_routes_for_mode, get_color_per_route
 
-import pandas as pd
-import networkx as nx
+import pandas as pd # type: ignore
+import networkx as nx # type: ignore
 import copy
 import random
 import time
