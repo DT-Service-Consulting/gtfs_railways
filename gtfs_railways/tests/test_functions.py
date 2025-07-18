@@ -8,9 +8,8 @@ from gtfs_railways.functions.v0 import P_space as P_space_0, get_all_GTC as get_
 from gtfs_railways.functions.v1 import P_space as P_space_1, get_all_GTC as get_all_GTC_1
 from gtfs_railways.functions.v2 import P_space as P_space_2, get_all_GTC as get_all_GTC_2
 from gtfs_railways.functions.v3 import P_space as P_space_3, get_all_GTC as get_all_GTC_3
-#from gtfs_railways.functions.v4 import P_space as P_space_4, get_all_GTC as get_all_GTC_4
-#from gtfs_railways.functions.v4 import P_space as P_space_4, get_all_GTC as get_all_GTC_5
-
+from gtfs_railways.functions.v4 import P_space as P_space_4, get_all_GTC as get_all_GTC_4
+from gtfs_railways.functions.v4 import P_space as P_space_5, get_all_GTC as get_all_GTC_5
 
 
 @pytest.fixture
@@ -35,21 +34,30 @@ def test_get_all_GTC(L_space_10_path, attributes_path):
     P_1 = P_space_1(attributes, L_10_graph, "Rail", 5, 24, None)
     P_2 = P_space_2(attributes, L_10_graph, "Rail", 5, 24, None)
     P_3 = P_space_3(attributes, L_10_graph, "Rail", 5, 24, None)
-    #P_4 = P_space_4(attributes, L_10_graph, "Rail", 5, 24, None)
-    #P_5 = P_space_5(attributes, L_10_graph, "Rail", 5, 24, None)
+    P_4 = P_space_4(attributes, L_10_graph, "Rail", 5, 24, None)
+    P_5 = P_space_5(attributes, L_10_graph, "Rail", 5, 24, None)
 
     # Travel Cost
     TC_0 = get_all_GTC_0(L_10_graph, P_0, 3, 2, [5])
     TC_1 = get_all_GTC_1(L_10_graph, P_1, 3, 2, [5])
     TC_2 = get_all_GTC_2(L_10_graph, P_2, 3, 2, [5])
     TC_3 = get_all_GTC_3(L_10_graph, P_3, 3, 2, [5])
-    #TC_4 = get_all_GTC_1(L_10_graph, P_graph_4, 3, 2, [5])
-    #TC_5 = get_all_GTC_1(L_10_graph, P_graph_5, 3, 2, [5])
+    TC_4 = get_all_GTC_4(L_10_graph, P_4, 3, 2, [5])
+    TC_5 = get_all_GTC_1(L_10_graph, P_5, 3, 2, [5])
 
     # Check if all values are equal
-    #print(TC_0)
-    #assert TC_0 == TC_1 == TC_2, "Not all values are equal"
-    #assert TC_0 == TC_1 == TC_2 == TC_3 == TC_4 == TC_5, "Not all values are equal"
+    result_0 = TC_0[326][298][0]
+    result_1 = TC_1[326][298]
+    result_2 = TC_2[326][298]
+    result_3 = TC_3[326][298]
+    result_4 = TC_4[326][298]
+    result_5 = TC_5[326][298]
+    assert result_0['GTC'] == result_1['GTC'] == result_2['GTC'] == result_3['GTC'] == result_4['GTC'] == result_5['GTC']
+    assert result_0['in_vehicle'] == result_1['in_vehicle'] == result_2['in_vehicle'] == result_3['in_vehicle'] == result_4['in_vehicle'] == result_5['in_vehicle']
+    assert result_0['n_transfers'] == result_1['n_transfers'] == result_2['n_transfers'] == result_3['n_transfers'] == result_4['n_transfers'] == result_5['n_transfers']
+    assert result_0['path'] == result_1['path'] == result_2['path'] == result_3['path'] == result_4['path'] == result_5['path']
+    assert result_0['traveled_distance'] == result_1['traveled_distance'] == result_2['traveled_distance'] == result_3['traveled_distance'] == result_4['traveled_distance'] == result_5['traveled_distance']
+    assert result_0['waiting_time'] == result_1['waiting_time'] == result_2['waiting_time'] == result_3['waiting_time'] == result_4['waiting_time'] == result_5['waiting_time']
 
 
 def test_efficiency(attributes_path, L_space_10_path):
@@ -66,9 +74,21 @@ def test_efficiency(attributes_path, L_space_10_path):
     P_2 = P_space_2(attributes, L_10_graph, "Rail", 5, 24, None)
     TC_2 = get_all_GTC_2(L_10_graph, P_2, 3, 2, [5])
 
+    P_3 = P_space_3(attributes, L_10_graph, "Rail", 5, 24, None)
+    TC_3 = get_all_GTC_3(L_10_graph, P_3, 3, 2, [5])
+
+    P_4 = P_space_4(attributes, L_10_graph, "Rail", 5, 24, None)
+    TC_4 = get_all_GTC_4(L_10_graph, P_4, 3, 2, [5])
+
+    P_5 = P_space_5(attributes, L_10_graph, "Rail", 5, 24, None)
+    TC_5 = get_all_GTC_5(L_10_graph, P_5, 3, 2, [5])
+
     efficiency_0 = efficiency_graph(L_10_graph, TC_0)
     efficiency_1 = efficiency_graph(L_10_graph, TC_1)
     efficiency_2 = efficiency_graph(L_10_graph, TC_2)
+    efficiency_3 = efficiency_graph(L_10_graph, TC_3)
+    efficiency_4 = efficiency_graph(L_10_graph, TC_4)
+    efficiency_5 = efficiency_graph(L_10_graph, TC_5)
 
     print(efficiency_1)
-    assert efficiency_0 == efficiency_1 == efficiency_2
+    assert efficiency_0 == efficiency_1 == efficiency_2 == efficiency_3 == efficiency_4 == efficiency_5

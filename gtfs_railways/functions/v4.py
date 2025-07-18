@@ -7,7 +7,7 @@ import random
 import time
 
 
-def get_all_GTC_refactored_(L_space, P_space, k, wait_pen, transfer_pen):
+def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
     # Precompute all attributes
     P_veh = nx.get_edge_attributes(P_space, "veh")
     P_wait = nx.get_edge_attributes(P_space, "avg_wait")
@@ -93,7 +93,7 @@ def get_all_GTC_refactored_(L_space, P_space, k, wait_pen, transfer_pen):
 
     return shortest_paths
 
-def P_space_(g, L, mode, start_hour=5, end_hour=24, dir_indicator=None):
+def P_space(g, L, mode, start_hour=5, end_hour=24, dir_indicator=None):
     '''
     Create P-space graph given:
     g: gtfs feed
@@ -197,131 +197,3 @@ def P_space_(g, L, mode, start_hour=5, end_hour=24, dir_indicator=None):
                                      avg_wait=avg_wait)
 
     return P_G
-
-def eg_(g, L):
-    P = P_space_(g, L,
-                start_hour=5,
-                end_hour=24,
-                mode="Rail")
-
-    sp = get_all_GTC_refactored_(L, P, 3, 2, [5])
-    
-    eg = 0
-    for n1 in sorted(L.nodes()):
-        for n2 in sorted(L.nodes()):
-            if n1 != n2:
-                if sp[n1][n2]:
-                    tt = sp[n1][n2]["GTC"]
-                    eg += 1 / tt
-
-    return eg / (L.number_of_nodes() * (L.number_of_nodes() - 1))
-
-
-def simulate_fixed_node_removal_efficiency(
-    g,
-    L_graph,
-    num_to_remove=None,
-    pct_to_remove=None,  # priority over num_to_remove
-    method='random',  # random or targeted or betweenness
-    seed=None,
-    verbose=False
-):
-    """
-    Simulates the impact of fixed sequential node removals on the global efficiency of a graph.
-
-    Parameters:
-        L_graph (networkx.Graph): The subgraph from which nodes will be removed.
-        num_to_remove (int, optional): Number of nodes to remove. Ignored if percentage is given.
-        pct_to_remove (int, optional): Percentage of nodes to remove (between 1 and 100).
-        seed (int, optional): Random seed for node selection.
-        verbose (bool): Whether to print progress and debug information.
-    """
-    G = copy.deepcopy(L_graph)
-    total_nodes = G.number_of_nodes()
-
-    if pct_to_remove is not None:
-        if not (1 <= pct_to_remove <= 100):
-            raise ValueError("Percentage must be an integer between 1 and 100.")
-        num_to_remove = int(total_nodes * (pct_to_remove / 100))
-    elif num_to_remove is None:
-        raise ValueError("You must specify either num_to_remove or percentage.")
-
-    if num_to_remove > total_nodes:
-        print(f"Requested number of nodes to remove ({num_to_remove}) exceeds total nodes ({total_nodes}).")
-        num_to_remove = max(total_nodes - 2, 1)
-        if verbose:
-            print(f"Adjusting number of nodes to remove to {num_to_remove}.")
-
-    if method == "random":
-        return random_node_removal(g, G, num_to_remove, seed, verbose)
-    elif method == "targeted":
-        return targeted_node_removal(g, G, num_to_remove, verbose)
-    elif method == "betweenness":
-        return betweenness_node_removal(g, G, num_to_remove, verbose)
-    else:
-        raise ValueError("Invalid method. Choose 'random' or 'targeted' or 'betweenness'.")
-
-
-def run_removal_simulations(g, subgraphs_by_size, num_to_remove=None, pct_to_remove=None, method='random', seed=42, verbose=False):
-    """
-    Run node removal simulations across all subgraphs grouped by size and collect efficiency and timing metrics.
-
-    Parameters:
-        g (networkx.Graph): The original graph used to compute baseline efficiency.
-        subgraphs_by_size (dict): A dictionary where each key is a subgraph size and each value is a list of subgraphs (networkx.Graph).
-        num_to_remove (int): Number of nodes to remove from each subgraph. Default is 5.
-        seed (int): Random seed for reproducibility. Default is 42.
-        verbose (bool): Whether to print detailed output during simulation. Default is False.
-
-    Returns:
-        pd.DataFrame: A DataFrame where each row corresponds to one subgraph simulation and contains:
-            - graph_index: Index of the subgraph within its group
-            - num_nodes: Number of nodes in the subgraph
-            - num_edges: Number of edges in the subgraph
-            - runtime_seconds: Total time taken for the simulation
-            - original_efficiency: Efficiency before any node removal
-            - final_efficiency: Efficiency after all removals
-            - efficiency_after_each_removal: List of normalized efficiencies after each removal (excluding original)
-            - removed_nodes: List of removed node IDs
-            - removal_times: List of cumulative times after each removal
-            - eff_after_{i}: Normalized efficiency after i-th removal, where i=0 is the original
-    """
-    results = []
-
-    for size, graphs in subgraphs_by_size.items():
-        for idx, L in enumerate(graphs):
-            start = time.perf_counter()
-            try:
-                original_efficiency, efficiencies, num_removed, removed_nodes, removal_times = simulate_fixed_node_removal_efficiency(
-                    g,
-                    L_graph=L,
-                    num_to_remove=num_to_remove,
-                    pct_to_remove=pct_to_remove, # priority over num_to_remove
-                    method=method, # random or targeted
-                    seed=seed,
-                    verbose=verbose
-                )
-            except Exception as e:
-                print(f"Error on graph size {size}, index {idx}: {e}")
-                continue
-            end = time.perf_counter()
-            elapsed = end - start
-
-            result = {
-                "graph_index": idx,
-                "num_nodes": L.number_of_nodes(),
-                "num_edges": L.number_of_edges(),
-                "runtime_seconds": round(elapsed, 3),
-                "original_efficiency": original_efficiency,
-                "final_efficiency": efficiencies[-1] if efficiencies else None,
-                "efficiency_after_each_removal": efficiencies[0:] if len(efficiencies) > 1 else [],
-                "removed_nodes": removed_nodes,
-                "removal_times": removal_times
-            }
-
-            for i, eff in enumerate(efficiencies):
-                result[f"eff_after_{i}"] = eff
-
-            results.append(result)
-
-    return pd.DataFrame(results)

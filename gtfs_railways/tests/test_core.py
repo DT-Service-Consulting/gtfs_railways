@@ -34,7 +34,7 @@ def P_graph_example(L_space_10_path, attributes_path):
 @pytest.fixture
 def travel_cost_example(L_space_10_path, P_graph_example):
     L_10_graph = load_graph(L_space_10_path)
-    return get_all_GTC_1( L_10_graph, P_graph_example,3, 2, [5])
+    return get_all_GTC_1(L_10_graph, P_graph_example,3, 2, [5])
 
 
 def test_load_gtfs(attributes_path):
