@@ -1093,8 +1093,8 @@ def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
     
     # Loop through all node combinations
     for n1 in L_space.nodes:
-        if n1%10==0:
-        	print("%d/%d"%(n1,len(L_space.nodes)))
+        # if n1%10==0:
+        # 	print("%d/%d"%(n1,len(L_space.nodes)))
         
         shortest_paths[n1] = {}
         

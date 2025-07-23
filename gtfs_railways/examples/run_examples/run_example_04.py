@@ -2,20 +2,13 @@ print("Running examples...")
 from gtfs_railways.config import EXAMPLES_DIR, DATA_DIR
 from pprint import pprint
 
-from gtfs_railways.functions.core import load_graph, \
-    load_gtfs, simulate_fixed_node_removal_efficiency, make_sp_func
-from gtfs_railways.functions.v0 import P_space as P_space_0, \
-    get_all_GTC as get_all_GTC_0
-from gtfs_railways.functions.v1 import P_space as P_space_1, \
-    get_all_GTC as get_all_GTC_1
-from gtfs_railways.functions.v2 import P_space as P_space_2, \
-    get_all_GTC as get_all_GTC_2
-from gtfs_railways.functions.v3 import P_space as P_space_3, \
-    get_all_GTC as get_all_GTC_3
-from gtfs_railways.functions.v4 import P_space as P_space_4, \
-    get_all_GTC as get_all_GTC_4
-from gtfs_railways.functions.v5 import P_space as P_space_5, \
-    get_all_GTC as get_all_GTC_5
+from gtfs_railways.functions.core import load_graph, load_gtfs, simulate_fixed_node_removal_efficiency, make_sp_func
+from gtfs_railways.functions.v0 import P_space as P_space_0, get_all_GTC as get_all_GTC_0
+from gtfs_railways.functions.v1 import P_space as P_space_1, get_all_GTC as get_all_GTC_1
+from gtfs_railways.functions.v2 import P_space as P_space_2, get_all_GTC as get_all_GTC_2
+from gtfs_railways.functions.v3 import P_space as P_space_3, get_all_GTC as get_all_GTC_3
+from gtfs_railways.functions.v4 import P_space as P_space_4, get_all_GTC as get_all_GTC_4
+from gtfs_railways.functions.v4 import P_space as P_space_5, get_all_GTC as get_all_GTC_5
 
 path_to_sqlite = str( DATA_DIR / "sqlite/belgium.sqlite" )
 attributes = load_gtfs(path_to_sqlite)

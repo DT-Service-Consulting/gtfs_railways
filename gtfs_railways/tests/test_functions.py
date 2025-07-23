@@ -109,4 +109,4 @@ def test_simulate_fixed_node_removal_efficiency(L_space_10_path, attributes_path
     original_efficiency_5, efficiencies_5, num_removed_5, removed_nodes_5, removal_times_5 = simulate_fixed_node_removal_efficiency(L_graph=L_10_graph, sp_func=sp_func_5, num_to_remove=5, method='random', seed=42)
 
     assert original_efficiency_0 == original_efficiency_1 == original_efficiency_2 == original_efficiency_3 == original_efficiency_4 == original_efficiency_5
-    assert efficiencies_0[5] == efficiencies_1[5] == efficiencies_2[5] == efficiencies_3[5] == efficiencies_4[5] == efficiencies_5[5]
+    assert efficiencies_0 == efficiencies_1 == efficiencies_2 == efficiencies_3 == efficiencies_4 == efficiencies_5
