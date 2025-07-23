@@ -1,25 +1,25 @@
-import pandas as pd
-from itertools import islice
+import pandas as pd # type: ignore
+from itertools import islice 
 from statistics import mean 
-from gtfspy import gtfs, networks
-from bokeh.io import show, export_png
-from bokeh.models import (ColorBar,
+from gtfspy import gtfs, networks # type: ignore
+from bokeh.io import show, export_png # type: ignore
+from bokeh.models import (ColorBar, # type: ignore
                           HoverTool,
                           LinearColorMapper, Circle, 
                           MultiLine, WheelZoomTool,GMapOptions, 
                           DataRange1d, Button, EdgesAndLinkedNodes,
-                          ColorBar)
-from bokeh.layouts import column
-from bokeh.palettes import RdYlGn11
-from bokeh.plotting import figure,from_networkx, gmap
-from bokeh.tile_providers import CARTODBPOSITRON
-from pyproj import Transformer
+                          ColorBar) 
+from bokeh.layouts import column # type: ignore
+from bokeh.palettes import RdYlGn11 # type: ignore
+from bokeh.plotting import figure,from_networkx, gmap # type: ignore
+from bokeh.tile_providers import CARTODBPOSITRON # type: ignore
+from pyproj import Transformer # type: ignore
 from collections import Counter
-import networkx as nx
+import networkx as nx # type: ignore
 import pickle
 from thefuzz import fuzz
-import geopy.distance
-from IPython.display import clear_output
+import geopy.distance # type: ignore
+from IPython.display import clear_output # type: ignore
 import random
 
 # GTFS Modes

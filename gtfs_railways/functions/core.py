@@ -34,19 +34,25 @@ def efficiency_graph(L, sp):
             if n1 != n2 and n1 in sp and n2 in sp[n1]:
                 val = sp[n1][n2]
 
-                # Case 1: v0 – value is a dict with "GTC"
+                # Case 1: val is a dict with "GTC"
                 if isinstance(val, dict) and "GTC" in val:
                     gtc = val["GTC"]
                     if gtc > 0:
                         eg += 1 / gtc
                         count += 1
 
-                # Case 2: v1/v2 – value is a non-empty list of dicts
-                elif isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict) and "GTC" in val[0]:
-                    gtc = val[0]["GTC"]
-                    if gtc > 0:
-                        eg += 1 / gtc
-                        count += 1
+                # Case 2: val is a non-empty list of dicts with "GTC"
+                elif isinstance(val, list):
+                    if len(val) == 0:
+                        # No path, skip
+                        continue
+                    if isinstance(val[0], dict) and "GTC" in val[0]:
+                        gtc = val[0]["GTC"]
+                        if gtc > 0:
+                            eg += 1 / gtc
+                            count += 1
+                    else:
+                        raise ValueError(f"Unexpected structure at sp[{n1}][{n2}]: {val}")
 
                 else:
                     raise ValueError(f"Unexpected structure at sp[{n1}][{n2}]: {val}")
@@ -60,6 +66,7 @@ def efficiency_graph(L, sp):
 def simulate_fixed_node_removal_efficiency(
     g,
     L_graph,
+    sp_func,
     num_to_remove=None,
     pct_to_remove=None,  # priority over num_to_remove
     method='random',  # random or targeted or betweenness
@@ -81,34 +88,36 @@ def simulate_fixed_node_removal_efficiency(
 
     if pct_to_remove is not None:
         if not (1 <= pct_to_remove <= 100):
-            raise ValueError("Percentage must be an integer between 1 and 100.")
+            raise ValueError("Percentage must be between 1 and 100.")
         num_to_remove = int(total_nodes * (pct_to_remove / 100))
     elif num_to_remove is None:
-        raise ValueError("You must specify either num_to_remove or percentage.")
+        raise ValueError("Specify num_to_remove or pct_to_remove.")
 
     if num_to_remove > total_nodes:
-        print(f"Requested number of nodes to remove ({num_to_remove}) exceeds total nodes ({total_nodes}).")
-        num_to_remove = max(total_nodes - 2, 1)
         if verbose:
-            print(f"Adjusting number of nodes to remove to {num_to_remove}.")
+            print(f"Adjusting number of nodes to remove from {num_to_remove} to {total_nodes - 2}.")
+        num_to_remove = max(total_nodes - 2, 1)
 
     if method == "random":
-        return random_node_removal(g, G, num_to_remove, seed, verbose)
+        # Here pass L_graph as g to random_node_removal (or whichever is expected)
+        return random_node_removal(L_graph, G, num_to_remove, sp_func, seed, verbose)
     elif method == "targeted":
-        return targeted_node_removal(g, G, num_to_remove, verbose)
+        return targeted_node_removal(L_graph, G, num_to_remove, verbose)
     elif method == "betweenness":
-        return betweenness_node_removal(g, G, num_to_remove, verbose)
+        return betweenness_node_removal(L_graph, G, num_to_remove, verbose)
     else:
-        raise ValueError("Invalid method. Choose 'random' or 'targeted' or 'betweenness'.")
+        raise ValueError("Invalid method. Choose 'random', 'targeted', or 'betweenness'.")
 
-def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
+def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
     """
     Removes edges connected to nodes in a random order and tracks the impact on global efficiency.
     The nodes themselves remain in the graph.
 
     Parameters:
+        g: Base attributes or data required by efficiency_graph (not the networkx graph).
         G (networkx.Graph): The input graph to modify (passed by reference).
         num_to_remove (int): Number of nodes whose edges will be removed.
+        sp_func (callable): Function to compute shortest path structure given a graph.
         seed (int, optional): Seed for reproducible random node selection.
         verbose (bool): Whether to print detailed logs during execution.
 
@@ -127,9 +136,12 @@ def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
     if verbose:
         print(f"Random removal order: {removal_nodes}")
 
-    original_efficiency = efficiency_graph(g, G)
+    # Compute initial global efficiency on original graph
+    sp = sp_func(G)
+    original_efficiency = efficiency_graph(g, sp)  # Use g here, not G
     if verbose:
         print(f"Original Efficiency: {original_efficiency}")
+
     efficiencies = [1.0]
     num_removed = [0]
     removed_nodes = []
@@ -138,20 +150,22 @@ def random_node_removal(g, G, num_to_remove, seed=None, verbose=False):
     for i, node in enumerate(removal_nodes):
         start_time = time.perf_counter()
 
-        # Skip if node is already isolated (no edges)
-        if G.in_degree(node) == 0 and G.out_degree(node) == 0:
+        # Skip if node already isolated
+        if G.degree(node) == 0:
             if verbose:
                 print(f"Step {i + 1}: Node {node} already isolated, skipping.")
             efficiencies.append(efficiencies[-1])
             num_removed.append(num_removed[-1])
             continue
 
+        # Remove edges connected to node
         edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
         G.remove_edges_from(edges_to_remove)
         removed_nodes.append(node)
 
         try:
-            eff = efficiency_graph(g, G)
+            sp = sp_func(G)
+            eff = efficiency_graph(g, sp)  # Use g here, not G
         except Exception as e:
             if verbose:
                 print(f"Error after removing edges of {node}: {e}")
