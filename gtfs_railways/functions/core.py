@@ -73,7 +73,6 @@ def make_sp_func(attributes, get_all_GTC_func, P_space_func):
     return sp_func
 
 def simulate_fixed_node_removal_efficiency(
-    g,
     L_graph,
     sp_func,
     num_to_remove=None,
@@ -368,7 +367,15 @@ def betweenness_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     return original_efficiency, efficiencies, num_removed, removed_nodes, removal_times
 
 
-def run_removal_simulations(g, subgraphs_by_size, num_to_remove=None, pct_to_remove=None, method='random', seed=42, verbose=False):
+def run_removal_simulations(
+    subgraphs_by_size,
+    num_to_remove=None,
+    pct_to_remove=None,
+    method='random',
+    seed=42,
+    verbose=False,
+    sp_func=None,
+):
     """
     Run node removal simulations across all subgraphs grouped by size and collect efficiency and timing metrics.
 
@@ -397,20 +404,24 @@ def run_removal_simulations(g, subgraphs_by_size, num_to_remove=None, pct_to_rem
     for size, graphs in subgraphs_by_size.items():
         for idx, L in enumerate(graphs):
             start = time.perf_counter()
-            # try:
-            original_efficiency, efficiencies, num_removed, removed_nodes, removal_times = (
-                simulate_fixed_node_removal_efficiency(
-                g,
-                L_graph=L,
-                num_to_remove=num_to_remove,
-                pct_to_remove=pct_to_remove, # priority over num_to_remove
-                method=method, # random or targeted
-                 seed=seed,
-                verbose=verbose
-                ))
-            # except Exception as e:
-            #     # print(f"Error on graph size {size}, index {idx}: {e}")
-            #     continue
+
+            try:
+                original_efficiency, efficiencies, num_removed, removed_nodes, removal_times = (
+                    simulate_fixed_node_removal_efficiency(
+                        L_graph=L,
+                        num_to_remove=num_to_remove,
+                        pct_to_remove=pct_to_remove,
+                        method=method,
+                        seed=seed,
+                        verbose=verbose,
+                        sp_func=sp_func
+                    )
+                )
+            except Exception as e:
+                if verbose:
+                    print(f"Error on graph size {size}, index {idx}: {e}")
+                continue
+
             end = time.perf_counter()
             elapsed = end - start
 
@@ -421,7 +432,7 @@ def run_removal_simulations(g, subgraphs_by_size, num_to_remove=None, pct_to_rem
                 "runtime_seconds": round(elapsed, 3),
                 "original_efficiency": original_efficiency,
                 "final_efficiency": efficiencies[-1] if efficiencies else None,
-                "efficiency_after_each_removal": efficiencies[0:] if len(efficiencies) > 1 else [],
+                "efficiency_after_each_removal": efficiencies[1:] if len(efficiencies) > 1 else [],
                 "removed_nodes": removed_nodes,
                 "removal_times": removal_times
             }
