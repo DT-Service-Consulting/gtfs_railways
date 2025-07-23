@@ -1198,7 +1198,7 @@ def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
                 #crow_dist = round(distance(L_space, n1, n2))
                 #shortest_paths[n1][n2]['crow_dist'] = crow_dist
     
-    print("All GTC computed!")
+    # print("All GTC computed!")
     return shortest_paths
     
     
