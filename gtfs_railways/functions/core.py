@@ -66,6 +66,11 @@ def efficiency_graph(L, sp):
 
     return eg / count
 
+def make_sp_func(attributes, get_all_GTC_func, P_space_func):
+    def sp_func(G):
+        P_graph = P_space_func(attributes, G, "Rail", 5, 24, None)
+        return get_all_GTC_func(G, P_graph, k=1, wait_pen=2, transfer_pen=[5, 7, 9])
+    return sp_func
 
 def simulate_fixed_node_removal_efficiency(
     g,
