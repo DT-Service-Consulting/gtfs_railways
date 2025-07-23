@@ -31,37 +31,40 @@ def efficiency_graph(L, sp):
     count = 0
     for n1 in sorted(L.nodes()):
         for n2 in sorted(L.nodes()):
-            if n1 != n2 and n1 in sp and n2 in sp[n1]:
-                val = sp[n1][n2]
+            if n1 == n2:
+                continue
+            count += 1  # Always count this pair
 
-                # Case 1: val is a dict with "GTC"
-                if isinstance(val, dict) and "GTC" in val:
-                    gtc = val["GTC"]
+            if n1 not in sp or n2 not in sp[n1]:
+                # No path between n1 and n2
+                continue  # efficiency += 0 implicitly
+
+            val = sp[n1][n2]
+
+            # Case 1: val is a dict with "GTC"
+            if isinstance(val, dict) and "GTC" in val:
+                gtc = val["GTC"]
+                if gtc > 0:
+                    eg += 1 / gtc
+
+            # Case 2: val is a non-empty list of dicts with "GTC"
+            elif isinstance(val, list):
+                if len(val) == 0:
+                    continue  # no path, efficiency += 0
+                if isinstance(val[0], dict) and "GTC" in val[0]:
+                    gtc = val[0]["GTC"]
                     if gtc > 0:
                         eg += 1 / gtc
-                        count += 1
-
-                # Case 2: val is a non-empty list of dicts with "GTC"
-                elif isinstance(val, list):
-                    if len(val) == 0:
-                        # No path, skip
-                        continue
-                    if isinstance(val[0], dict) and "GTC" in val[0]:
-                        gtc = val[0]["GTC"]
-                        if gtc > 0:
-                            eg += 1 / gtc
-                            count += 1
-                    else:
-                        raise ValueError(f"Unexpected structure at sp[{n1}][{n2}]: {val}")
-
                 else:
                     raise ValueError(f"Unexpected structure at sp[{n1}][{n2}]: {val}")
 
+            else:
+                raise ValueError(f"Unexpected structure at sp[{n1}][{n2}]: {val}")
+
     if count == 0:
-        raise ZeroDivisionError("No valid GTC values found for any node pair.")
+        raise ZeroDivisionError("No node pairs to evaluate.")
 
     return eg / count
-
 
 def simulate_fixed_node_removal_efficiency(
     g,
