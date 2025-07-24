@@ -2,7 +2,7 @@
 
 import pytest # type: ignore
 from gtfs_railways.functions.core import load_gtfs, load_graph, efficiency_graph, make_sp_func, simulate_fixed_node_removal_efficiency, run_removal_simulations
-from gtfs_railways.config import EXAMPLES_DIR, DATA_DIR
+from gtfs_railways.utils.config import EXAMPLES_DIR, DATA_DIR
 
 from gtfs_railways.functions.v0 import P_space as P_space_0, get_all_GTC as get_all_GTC_0
 from gtfs_railways.functions.v1 import P_space as P_space_1, get_all_GTC as get_all_GTC_1

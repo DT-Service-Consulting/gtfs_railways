@@ -3,9 +3,9 @@
 import pytest # type: ignore
 import gtfspy # type: ignore
 from gtfs_railways.functions.core import load_gtfs, \
-    load_graph, efficiency_graph
+    load_graph
 import networkx as nx # type: ignore
-from gtfs_railways.config import EXAMPLES_DIR, DATA_DIR
+from gtfs_railways.utils.config import EXAMPLES_DIR, DATA_DIR
 from gtfs_railways.functions.v1 import P_space as P_space_1, \
     get_all_GTC as get_all_GTC_1
 
