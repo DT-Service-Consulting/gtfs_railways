@@ -6,10 +6,10 @@ import time
 import copy
 import pickle
 import os
-from gtfspy import import_gtfs, gtfs, networks
-import networkx as nx
+from gtfspy import import_gtfs, gtfs, networks # type: ignore
+import networkx as nx # type: ignore
 import random
-import pandas as pd
+import pandas as pd # type: ignore
 
 def load_gtfs(imported_database_path, gtfs_path=None, name=""):
     if not os.path.exists(imported_database_path):  # reimport only if the imported database does not already exist
