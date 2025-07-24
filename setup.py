@@ -8,7 +8,8 @@ if os.path.exists(readme_path):
     with open(readme_path, encoding="utf-8") as f:
         long_description = f.read()
 else:
-    long_description = "A Python library to process and visualize GTFS (General Transit Feed Specification) data for railways."
+    long_description = ("A Python library to process and visualize GTFS (General Transit Feed Specification) "
+                        "data for railways.")
 
 
 setup(
