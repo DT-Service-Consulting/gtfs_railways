@@ -3,7 +3,7 @@ from gtfs_railways.config import DATA_DIR
 from gtfs_railways.functions.core import load_graph, load_gtfs
 from gtfs_railways.functions.v1 import P_space
 
-path_to_sqlite = "/Users/marco/Library/CloudStorage/OneDrive-DTServicesandConsultingSRL/BRAIN/PROJECTS/Railways_Resilience/belgium 1.sqlite"
+path_to_sqlite = str( DATA_DIR / "sqlite/belgium.sqlite" )
 attributes = load_gtfs(path_to_sqlite)
 
 L_space_path = DATA_DIR / "pkl/10/graph_0.pkl"  # Path where the clean L-space graph was stored (cleaned routes)
