@@ -12,19 +12,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Make setup.sh executable and run it
-      run: |
-        chmod +x setup.sh
-        ./setup.sh
+      - name: Make setup.sh executable and run it
+        run: |
+          chmod +x setup.sh
+          ./setup.sh
 
-    - name: Run pytest: test1, test2, test3
-      run: |
-        pytest -k "test_core.py" -v
-        pytest -k "test_functions.py" -v
+      - name: run pytest
+        run: |
+          pytest -k "test_core.py" -v
+          pytest -k "test_functions.py" -v
 
-    - name: Run example1, example2, example3
-      run: |
-        python -c "from examples.examples import example1, example2, example3; example1(); example2(); example3()"
+        timeout-minutes:
+        continue-on-error: false
+      - name: Run example1, example2, example3
+        run: |
+          python -c "from examples.examples import example1, example2, example3; example1(); example2(); example3()"
