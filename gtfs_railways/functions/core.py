@@ -10,6 +10,19 @@ from gtfspy import import_gtfs, gtfs, networks # type: ignore
 import networkx as nx # type: ignore
 import random
 import pandas as pd # type: ignore
+from collections import deque
+from functools import wraps
+
+def compute_time(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        print(f"Function '{func.__name__}' completed.")
+        print(f"Execution time: {end_time - start_time:.2f} seconds\n")
+        return result
+    return wrapper
 
 def load_gtfs(imported_database_path, gtfs_path=None, name=""):
     if not os.path.exists(imported_database_path):  # reimport only if the imported database does not already exist
@@ -25,6 +38,40 @@ def load_graph(path):
     with open(path, 'rb') as f:
         G = pickle.load(f)
         return G
+    
+def extract_directed_subgraph(G, target_size, min_edges=3, seed=None):
+    if seed is not None:
+        random.seed(seed)
+
+    nodes = list(G.nodes())
+    random.shuffle(nodes)
+    seen_node_sets = set()
+
+    for seed_node in nodes:
+        visited = set([seed_node])
+        queue = deque([seed_node])
+
+        while queue and len(visited) < target_size:
+            current = queue.popleft()
+            neighbors = list(G.successors(current))
+            random.shuffle(neighbors)
+
+            for neighbor in neighbors:
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
+                if len(visited) == target_size:
+                    break
+
+        if len(visited) == target_size:
+            node_tuple = tuple(sorted(visited))
+            if node_tuple in seen_node_sets:
+                continue
+
+            subG = G.subgraph(visited).copy()
+            if subG.number_of_edges() >= min_edges:
+                seen_node_sets.add(node_tuple)
+                yield subG
     
 def generate_subgraph_batches(G, sizes=(5, 10, 15), num_per_size=10, seed=42, min_edges=3):
     all_subgraphs = {size: [] for size in sizes}
