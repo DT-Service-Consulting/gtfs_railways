@@ -1,11 +1,8 @@
 from collections import defaultdict
-from gtfs_railways.functions.utils import mode_from_string, get_routes_for_mode, get_color_per_route
+from gtfs_railways.legacy.utils import mode_from_string, get_routes_for_mode
 
 import pandas as pd # type: ignore
 import networkx as nx # type: ignore
-import copy
-import random
-import time
 
 
 def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
