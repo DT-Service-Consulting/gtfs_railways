@@ -2,15 +2,15 @@
 
 import pytest # type: ignore
 import gtfspy # type: ignore
-from pprint import pprint
-from gtfs_railways.functions.core import load_gtfs, \
-    load_graph
 import networkx as nx # type: ignore
-from gtfs_railways.utils.config import EXAMPLES_DIR, DATA_DIR
+from pprint import pprint
 
-from gtfs_railways.functions.v0 import P_space as P_space_0, \
-    get_all_GTC as get_all_GTC_0
+from gtfs_railways.utils.config import DATA_DIR
 
+from gtfs_railways.functions.core import load_gtfs
+from gtfs_railways.functions.core import load_graph
+
+from gtfs_railways.functions.v0 import get_all_GTC as get_all_GTC_0
 from gtfs_railways.functions.v1 import P_space as P_space_1, \
     get_all_GTC as get_all_GTC_1
 
