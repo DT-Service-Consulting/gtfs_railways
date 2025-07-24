@@ -7,7 +7,7 @@ from pprint import pprint
 path_to_sqlite = str( DATA_DIR / "sqlite/belgium.sqlite" )
 attributes = load_gtfs(path_to_sqlite)
 
-L_space_path = EXAMPLES_DIR / "10/graph_0.pkl"  # Path where the clean L-space graph was stored (cleaned routes)
+L_space_path = DATA_DIR / "pkl/10/graph_0.pkl"  # Path where the clean L-space graph was stored (cleaned routes)
 L_graph = load_graph(L_space_path)
 P_graph = P_space(attributes, L_graph, "Rail", 5, 24, None)
 

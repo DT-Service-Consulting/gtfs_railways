@@ -13,7 +13,7 @@ from gtfs_railways.functions.v4 import P_space as P_space_5, get_all_GTC as get_
 path_to_sqlite = str( DATA_DIR / "sqlite/belgium.sqlite" )
 attributes = load_gtfs(path_to_sqlite)
 
-L_space_path = EXAMPLES_DIR / "10/graph_0.pkl"  # Path where the clean L-space graph was stored (cleaned routes)
+L_space_path = DATA_DIR / "pkl/10/graph_0.pkl"  # Path where the clean L-space graph was stored (cleaned routes)
 L_graph = load_graph(L_space_path)
 
 sp_func_0 = make_sp_func(attributes, get_all_GTC_0, P_space_0)
