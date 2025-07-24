@@ -1,7 +1,7 @@
 # Python
 
 import pytest # type: ignore
-from gtfs_railways.functions.core import load_gtfs, load_graph, efficiency_graph, make_sp_func, simulate_fixed_node_removal_efficiency
+from gtfs_railways.functions.core import load_gtfs, load_graph, efficiency_graph, make_sp_func, simulate_fixed_node_removal_efficiency, run_removal_simulations
 from gtfs_railways.config import EXAMPLES_DIR, DATA_DIR
 
 from gtfs_railways.functions.v0 import P_space as P_space_0, get_all_GTC as get_all_GTC_0
@@ -18,9 +18,9 @@ def L_space_10_path():
     return str( EXAMPLES_DIR / "10/graph_0.pkl" )
 
 @pytest.fixture
-def L_space_20_path():
+def L_space_many():
     # Use the graph_0.pkl file from the examples directory
-    return str( EXAMPLES_DIR / "20/graph_0.pkl" )
+    return str( DATA_DIR / "pkl/subgraphs_by_size.pkl" )
 
 @pytest.fixture
 def attributes_path():
@@ -110,3 +110,18 @@ def test_simulate_fixed_node_removal_efficiency(L_space_10_path, attributes_path
 
     assert original_efficiency_0 == original_efficiency_1 == original_efficiency_2 == original_efficiency_3 == original_efficiency_4 == original_efficiency_5
     assert efficiencies_0 == efficiencies_1 == efficiencies_2 == efficiencies_3 == efficiencies_4 == efficiencies_5
+
+def test_random_removal_simulations(L_space_10_many, attributes_path):
+    attributes = load_gtfs(attributes_path)
+    L_graphs = load_graph(L_space_many)
+
+    sp_func_0 = make_sp_func(attributes, get_all_GTC_0, P_space_0)
+    sp_func_1 = make_sp_func(attributes, get_all_GTC_1, P_space_1)
+    sp_func_2 = make_sp_func(attributes, get_all_GTC_2, P_space_2)
+    sp_func_3 = make_sp_func(attributes, get_all_GTC_3, P_space_3)
+    sp_func_4 = make_sp_func(attributes, get_all_GTC_4, P_space_4)
+    sp_func_5 = make_sp_func(attributes, get_all_GTC_5, P_space_5)
+
+    results_random_0 = run_removal_simulations(subgraphs_by_size=L_graphs, sp_func=sp_func_0, num_to_remove=5, method='random', seed=42)
+
+    
