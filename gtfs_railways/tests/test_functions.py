@@ -1,7 +1,6 @@
 # Python
 
 import pytest # type: ignore
-from gtfs_railways.utils.config import DATA_DIR
 
 from gtfs_railways.functions.core import load_gtfs
 from gtfs_railways.functions.core import load_graph
@@ -17,19 +16,10 @@ from gtfs_railways.functions.v3 import P_space as P_space_3, get_all_GTC as get_
 from gtfs_railways.functions.v4 import P_space as P_space_4, get_all_GTC as get_all_GTC_4
 from gtfs_railways.functions.v4 import P_space as P_space_5, get_all_GTC as get_all_GTC_5
 
-@pytest.fixture
-def L_space_10_path():
-    # Use the graph_0.pkl file from the examples directory
-    return str( DATA_DIR / "pkl/10/graph_0.pkl" )
 
-@pytest.fixture
-def L_space_many():
-    # Use the graph_0.pkl file from the examples directory
-    return str( DATA_DIR / "pkl/subgraphs_by_size.pkl" )
-
-@pytest.fixture
-def attributes_path():
-    return str( DATA_DIR / "sqlite/belgium.sqlite" )
+from gtfs_railways.tests.conftest import L_space_10_path
+from gtfs_railways.tests.conftest import L_space_many
+from gtfs_railways.tests.conftest import attributes_path
 
 def test_get_all_GTC(L_space_10_path, attributes_path):
     attributes = load_gtfs(attributes_path)
