@@ -723,3 +723,81 @@ def compute_graph_features(L):
         'avg_clustering_coeff': avg_clustering_coeff,
         'num_bridges': num_bridges
     }
+
+def get_efficiency_curves(
+    attributes,
+    subgraphs,
+    versions_sp_func,
+    target_size=15,
+    num_seeds=5,
+    seeds=None
+):
+    """
+    Run node removal simulations across multiple versions and multiple seeds for specific subgraph sizes.
+
+    Parameters:
+        attributes: node/graph attributes used by sp_func
+        subgraphs: dict of size -> list of subgraphs (networkx graphs)
+        versions_sp_func: dict mapping version label to sp_func
+        target_size: int or list of ints; subgraph sizes to run simulations on
+        num_seeds: number of random seeds to run
+        seeds: optional list of seeds; if None, generated internally
+
+    Returns:
+        dict of version -> dict of size -> list of dict with keys 'curve', 'removed_nodes', 'time'
+        list of seeds used
+    """
+    import numpy as np
+    import time
+
+    if isinstance(target_size, int):
+        target_sizes = [target_size]
+    else:
+        target_sizes = target_size
+
+    # Validate target sizes exist in subgraphs
+    for size in target_sizes:
+        if size not in subgraphs:
+            raise ValueError(f"Target size {size} not found in subgraphs")
+
+    if seeds is None:
+        seeds = list(np.random.SeedSequence(1234).generate_state(num_seeds))
+
+    version_curves = {v: {size: [] for size in target_sizes} for v in versions_sp_func.keys()}
+
+    for label, sp_func in versions_sp_func.items():
+        print(f"Running simulations for version {label} on subgraph sizes {target_sizes}")
+
+        for seed in seeds:
+            start_time = time.time()
+
+            # Select all subgraphs for all target sizes
+            subgraphs_to_run = {size: subgraphs[size] for size in target_sizes}
+
+            df = run_removal_simulations(
+                subgraphs_by_size=subgraphs_to_run,
+                pct_to_remove=50,
+                method='random',
+                seed=seed,
+                sp_func=sp_func,
+                verbose=False,
+            )
+
+            elapsed = time.time() - start_time
+
+            # Collect results per size
+            for size in target_sizes:
+                df_size = df[df['num_nodes'] == size]
+
+                for idx, row in df_size.iterrows():
+                    version_curves[label][size].append({
+                        'curve': row['efficiency_after_each_removal'],
+                        'removed_nodes': row['removed_nodes'],
+                        'time': elapsed,
+                        'seed': seed,
+                        'graph_index': row['graph_index']
+                    })
+
+            print(f"  Seed {seed} finished in {elapsed:.2f} seconds")
+
+    return version_curves, seeds
