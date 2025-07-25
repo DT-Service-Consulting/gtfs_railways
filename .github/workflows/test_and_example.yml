@@ -15,12 +15,8 @@ jobs:
         ls 
         pwd
         echo "Current directory: ${{ github.workspace }}"
-        ls ${{ github.workspace }}/examples/example_01.py
         ls ${{ github.workspace }}/gtfs_railways/examples/example_01.py
-        ls ${{ github.workspace }}/gtfs_railways/gtfs_railways/examples/example_01.py
-        ls ${{ github.workspace }}/tests/test_config.py
         ls ${{ github.workspace }}/gtfs_railways/tests/test_config.py
-        ls ${{ github.workspace }}/gtfs_railways/gtfs_railways/tests/test_config.py
         
         
 
