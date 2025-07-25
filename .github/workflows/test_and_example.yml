@@ -30,17 +30,20 @@ jobs:
       # This is the 'gtfs_railways' folder that contains 'setup.py' and the 'gtfs_railways' package folder.
       working-directory: ${{ github.workspace }}
       run:  |  
-        python -m pip install --upgrade pip
-        pip install pytest pytest-cov anyio
-        pip install -e .
-        pip install external_packages/osmread
-        pip install external_packages/gtfspy
+#        python -m pip install --upgrade pip
+#        pip install pytest pytest-cov anyio
+#        pip install -e .
+#        pip install external_packages/osmread
+#        pip install external_packages/gtfspy
 
 #    - name: run unit tests
 #      run: pytest -s gtfs_railways/tests/test_config.py
 
     - name: run examples
       run: |
+          ls gtfs_railways/examples
+          pwd
+          ls 
           python -c gtfs_railways/examples/example_01.py
           python -c gtfs_railways/examples/example_02.py
           python -c gtfs_railways/examples/example_03.py
