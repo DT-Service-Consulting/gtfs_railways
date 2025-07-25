@@ -27,8 +27,7 @@ jobs:
 
       - name: run unit tests
         run: |
-          pytest -k "test_core.py" -v
-          pytest -k "test_functions.py" -v
+          pytest -v gtfs_railways/tests
 
       - name: run examples
         run: |
