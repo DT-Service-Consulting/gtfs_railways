@@ -6,9 +6,8 @@ def test_project_structure():
     Test to ensure the project structure is correct.
     """
     print()
-    print(PROJECT_ROOT)
-    print(DATA_DIR)
-    print(EXAMPLES_DIR)
+    print('PROJECT_ROOT =' ,PROJECT_ROOT)
+    print('DATA_DIR =' ,DATA_DIR)
     assert (PROJECT_ROOT / 'setup.py').exists() or (PROJECT_ROOT / '.git').exists(), "Can't find project root"
     assert DATA_DIR.exists(), "Can't find data directory"
     assert EXAMPLES_DIR.exists(), "Can't find example directory"
