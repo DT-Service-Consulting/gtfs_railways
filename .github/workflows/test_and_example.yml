@@ -41,8 +41,8 @@ jobs:
 
     - name: run examples
       run: |
-          python -c gtfs_railways/gtfs_railways/examples/example_01.py
-          python -c gtfs_railways/gtfs_railways/examples/example_02.py
-          python -c gtfs_railways/gtfs_railways/examples/example_03.py
-          python -c gtfs_railways/gtfs_railways/examples/example_04.py
-          python -c gtfs_railways/gtfs_railways/examples/example_05.py
+          python -c gtfs_railways/examples/example_01.py
+          python -c gtfs_railways/examples/example_02.py
+          python -c gtfs_railways/examples/example_03.py
+          python -c gtfs_railways/examples/example_04.py
+          python -c gtfs_railways/examples/example_05.py
