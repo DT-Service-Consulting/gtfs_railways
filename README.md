@@ -46,9 +46,8 @@ pip gtfs_railways/external_packages/gtfspy
 
 
 - **example_04.py**
-   - Minimal working example of the P-space function.
-     The P-space is the ensemble of all possible paths in the railway network.
+   - Minimal working example of the nodes removal simulation on a single graph.
 
 
 - **example_05.py**
-    - Need a description of the example.
+    - Minimal working example of the simulations of node removals for multiple subgraphs
