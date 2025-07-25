@@ -17,3 +17,38 @@ Install the package from PyPI using pip:
 ```bash
 pip install gtfs-railways
 ```
+
+In its current state, the package requires some external packages to be installed manually. 
+You can install them using pip as follows:
+
+```bash
+pip gtfs_railways/external_packages/osmread
+pip gtfs_railways/external_packages/gtfspy
+```
+
+## Examples
+
+- **example_01.py**
+  - Minimal working example of the P-space function.
+    The P-space is the ensemble of all possible paths in the railway network.
+
+
+- **example_02.py**
+  - Minimal working example of the GTC function.
+    GTC is the computational cost to the calculation of all connections between two nodes in the P-space.
+
+    The travel cost is the calculation of all possible paths between any two nodes in the P-space.
+
+
+- **example_03.py**
+  - Minimal working example of the efficiency_graph function.
+    The efficiency_graph function has been optimized (version 0 to 5).
+
+
+- **example_04.py**
+   - Minimal working example of the P-space function.
+     The P-space is the ensemble of all possible paths in the railway network.
+
+
+- **example_05.py**
+    - Need a description of the example.

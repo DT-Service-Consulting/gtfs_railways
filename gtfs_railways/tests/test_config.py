@@ -1,4 +1,21 @@
-from gtfs_railways.config import BASE_DIR
-print(BASE_DIR)
+from gtfs_railways.utils.config import DATA_DIR, EXAMPLES_DIR, PROJECT_ROOT, FUNCTION_DIR
 
-print('test successful!!')
+
+def test_project_structure():
+    """
+    Test to ensure the project structure is correct.
+    """
+    print()
+    print('PROJECT_ROOT =' ,PROJECT_ROOT)
+    print('DATA_DIR =' ,DATA_DIR)
+    assert (PROJECT_ROOT / 'setup.py').exists() or (PROJECT_ROOT / '.git').exists(), "Can't find project root"
+    assert DATA_DIR.exists(), "Can't find data directory"
+    assert EXAMPLES_DIR.exists(), "Can't find example directory"
+    assert FUNCTION_DIR.exists(), "Can't find function directory"
+
+def test_data_dir_structure():
+    required_dirs = ['belgium', 'pkl', 'sqlite']
+    for subdir in required_dirs:
+        sub_path = DATA_DIR / subdir
+        assert sub_path.is_dir(), f"Missing expected subdirectory: {sub_path}"
+

@@ -1,0 +1,49 @@
+name: Run tests on macOS with Python 3.8.20
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  run-tests-and-examples:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: .
+
+      - name: Set up Python 3.8.20
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+
+      - name: Install the package from setup.py
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+          pip install external_packages/osmread
+          pip install external_packages/gtfspy
+
+      - name: Set PYTHONPATH
+        run: |
+          echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "I am using PYTHONPATH=${{ github.workspace }}"
+          echo "full env: $GITHUB_ENV"
+
+      - name: run unit tests
+        run: |
+          pytest --rootdir=. -s gtfs_railways/tests/test_config.py
+          working-directory: %{{ github.workspace }}
+
+      - name: run examples
+        run: |
+          python -c gtfs_railways/gtfs_railways/examples/example_01.py
+          python -c gtfs_railways/gtfs_railways/examples/example_02.py
+          python -c gtfs_railways/gtfs_railways/examples/example_03.py
+          python -c gtfs_railways/gtfs_railways/examples/example_04.py
+          python -c gtfs_railways/gtfs_railways/examples/example_05.py
