@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          path: .
 
       - name: Set up Python 3.8.20
         uses: actions/setup-python@v5
@@ -30,6 +32,7 @@ jobs:
       - name: run unit tests
         run: |
           pytest -s gtfs_railways/tests/test_config.py
+          working-directory: %{{ github.workspace }}
 
       - name: run examples
         run: |
