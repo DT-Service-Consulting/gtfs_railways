@@ -32,7 +32,7 @@ jobs:
         ls -l ${{ github.workspace }}
         ls -l ${{ github.workspace }}/gtfs_railways/tests
         ls -l ${{ github.workspace }}/gtfs_railways/tests/test_configs.py
-        pytest -s -v ${{ github.workspace }}/gtfs_railways/tests/test_configs.py
+        pytest -s -v ${{ github.workspace }}/gtfs_railways/tests/test_config.py
 #        pytest -s -v ${{ github.workspace }}/tests
 
     - name: run examples
