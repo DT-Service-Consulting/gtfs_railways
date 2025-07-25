@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: macos-latest # Or ubuntu-latest, depending on your needs
-
+"""
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -44,3 +44,4 @@ jobs:
           python -c ${{ github.workspace }}/examples/example_03.py
           python -c ${{ github.workspace }}/examples/example_04.py
           python -c ${{ github.workspace }}/examples/example_05.py
+"""
