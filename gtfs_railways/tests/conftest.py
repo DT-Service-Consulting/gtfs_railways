@@ -1,6 +1,5 @@
 import pytest # type: ignore
 
-
 from gtfs_railways.utils.config import DATA_DIR
 from gtfs_railways.functions.core import load_gtfs
 from gtfs_railways.functions.core import load_graph
