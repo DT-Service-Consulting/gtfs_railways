@@ -23,8 +23,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest pytest-cov anyio
         pip install -e .
-#        pip install external_packages/osmread
-#        pip install external_packages/gtfspy
+        pip install external_packages/osmread
+        pip install external_packages/gtfspy
 
     - name: run unit tests
       working-directory: ${{ github.workspace }}
@@ -33,6 +33,7 @@ jobs:
         ls -l ${{ github.workspace }}/gtfs_railways/tests
         ls -l ${{ github.workspace }}/gtfs_railways/tests/test_config.py
         pytest -s -v ${{ github.workspace }}/gtfs_railways/tests/test_config.py
+        pytest -s -v gtfs_railways/tests/test_config.py
 #        pytest -s -v ${{ github.workspace }}/tests
 
     - name: run examples
