@@ -1,5 +1,5 @@
 """
-Need a description of the example.
+Minimal working example of the simulations of node removals for multiple subgraphs
 """
 
 from gtfs_railways.utils.imports import *

@@ -1,6 +1,5 @@
 """
-Minimal working example of the P-space function.
-The P-space is the ensemble of all possible paths in the railway network.
+Minimal working example of the nodes removal simulation on a single graph.
 """
 
 print("Running example_04.py")

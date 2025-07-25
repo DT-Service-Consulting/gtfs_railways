@@ -14,6 +14,6 @@ def example_02():
     P_graph = P_space(attributes, L_graph, "Rail", 5, 24, None)
 
     travel_cost = get_all_GTC( L_graph, P_graph,3, 2, [5])
-    pprint(travel_cost)
+    # pprint(travel_cost)
 
 example_02()
