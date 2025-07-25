@@ -32,7 +32,7 @@ jobs:
       - name: Set PYTHONPATH
         run: |
           echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
-          echo "I am using $PYTHONPATH"
+          echo "I am using PYTHONPATH=${{ github.workspace }}"
           echo "full env: $GITHUB_ENV"
 
       - name: run unit tests
