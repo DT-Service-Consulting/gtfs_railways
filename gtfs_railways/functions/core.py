@@ -562,7 +562,7 @@ def run_removal_simulations(
                 "final_efficiency": efficiencies[-1] if efficiencies else None,
                 "efficiency_after_each_removal": efficiencies[1:] if len(efficiencies) > 1 else [],
                 "removed_nodes": removed_nodes,
-                "removal_times": removal_times
+                "remova l_times": removal_times
             }
 
             for i, eff in enumerate(efficiencies):
@@ -571,3 +571,64 @@ def run_removal_simulations(
             results.append(result)
 
     return pd.DataFrame(results)
+
+def get_runtime(version_label, run_func, subgraphs, 
+                method, sp_func, seed, num_to_remove=None, pct_to_remove=None,
+                target_sizes=None, verbose=False):
+    """
+    Runs `run_func` on subgraphs and measures runtimes per subgraph.
+
+    Parameters:
+    - version_label: str label for the run (e.g. "v1")
+    - run_func: function to run (e.g. run_removal_simulations)
+    - subgraphs: dict {size: [subgraph1, subgraph2, ...]}
+    - num_to_remove, pct_to_remove, method, sp_func, seed: params to pass to run_func
+    - target_sizes: list or int or None to specify sizes to run, else all sizes
+    - verbose: whether to print timing info
+
+    Returns:
+    - runtimes: dict {size: [time_per_subgraph]}
+    """
+    runtimes = {}
+
+    # Prepare sizes to run
+    if target_sizes is None:
+        sizes_to_run = sorted(subgraphs.keys())
+    elif isinstance(target_sizes, int):
+        sizes_to_run = [target_sizes]
+    elif isinstance(target_sizes, (list, tuple)):
+        sizes_to_run = list(target_sizes)
+    else:
+        raise TypeError("target_sizes must be None, int, or list/tuple of ints")
+
+    for size in sizes_to_run:
+        if size not in subgraphs:
+            print(f"Warning: size {size} not found in subgraphs, skipping.")
+            continue
+
+        runtimes[size] = []
+        if verbose:
+            print(f"Starting runs for size {size}...")
+
+        for idx, sg in enumerate(subgraphs[size]):
+            start = time.perf_counter()
+            run_func(
+                {size: [sg]},
+                num_to_remove=num_to_remove,
+                pct_to_remove=pct_to_remove,
+                method=method,
+                sp_func=sp_func,
+                seed=seed
+            )
+            end = time.perf_counter()
+            duration = end - start
+            runtimes[size].append(duration)
+
+            if verbose:
+                print(f"{version_label} - Size {size} - Subgraph {idx + 1}: {duration:.4f} seconds")
+
+        if verbose:
+            total_time = sum(runtimes[size])
+            print(f"{version_label} - Size {size}: Total runtime {total_time:.4f} seconds\n")
+
+    return runtimes
