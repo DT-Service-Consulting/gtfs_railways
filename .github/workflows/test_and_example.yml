@@ -1,4 +1,4 @@
-name: Run Selected Tests and Examples
+name: Run tests on macOS with Python 3.8.20
 
 on:
   push:
@@ -9,14 +9,14 @@ on:
 
 jobs:
   run-tests-and-examples:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Python 3.8
-        uses: actions/setup-python@v4
+      - name: Set up Python 3.8.20
+        uses: actions/setup-python@v5
         with:
           python-version: '3.8'
 
