@@ -29,6 +29,7 @@ jobs:
 
       - name: run unit tests
         run: |
+          ls .
           pytest -v gtfs_railways/tests/test_config.py
 
       - name: run examples

@@ -17,5 +17,3 @@ def test_data_dir_structure():
         sub_path = DATA_DIR / subdir
         assert sub_path.is_dir(), f"Missing expected subdirectory: {sub_path}"
 
-test_project_structure()
-test_data_dir_structure()
