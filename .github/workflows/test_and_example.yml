@@ -28,13 +28,13 @@ jobs:
 
     - name: run unit tests
       working-directory: ${{ github.workspace }}
-      run: pytest -s -v gtfs_railways/tests
+      run: pytest -s -v ${{ github.workspace }}/tests
 
     - name: run examples
       working-directory: ${{ github.workspace }}
       run: |
-          python -c gtfs_railways/examples/example_01.py
-          python -c gtfs_railways/examples/example_02.py
-          python -c gtfs_railways/examples/example_03.py
-          python -c gtfs_railways/examples/example_04.py
-          python -c gtfs_railways/examples/example_05.py
+          python -c ${{ github.workspace }}/examples/example_01.py
+          python -c ${{ github.workspace }}/examples/example_02.py
+          python -c ${{ github.workspace }}/examples/example_03.py
+          python -c ${{ github.workspace }}/examples/example_04.py
+          python -c ${{ github.workspace }}/examples/example_05.py
