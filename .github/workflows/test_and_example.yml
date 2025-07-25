@@ -17,6 +17,7 @@ jobs:
       run:  | 
         ls 
         pwd
+        echo "Current directory: ${{ github.workspace }}"
 
     - name: Set up Python 3.8
       uses: actions/setup-python@v5
@@ -26,7 +27,7 @@ jobs:
     - name: Install dependencies and package
       # Set the working directory to your project's root.
       # This is the 'gtfs_railways' folder that contains 'setup.py' and the 'gtfs_railways' package folder.
-      working-directory: ${{ github.workspace }}/gtfs_railways
+      working-directory: ${{ github.workspace }}
       run:  |  
         python -m pip install --upgrade pip
         pip install pytest pytest-cov anyio
