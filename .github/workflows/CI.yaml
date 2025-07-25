@@ -28,8 +28,11 @@ jobs:
         # Install your package in editable mode.
         # This makes 'gtfs_railways' directly importable.
         pip install -e .
+        pip install external_packages/osmread
+        pip install external_packages/gtfspy
+
 
     - name: Run tests
       # Run pytest from the same project root.
-      working-directory: ${{ github.workspace }}/gtfs_railways
-      run: pytest -v -s
+      working-directory: ${{ github.workspace }}
+      run: pytest -v -s gtfs_railways/tests
