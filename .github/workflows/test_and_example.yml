@@ -28,7 +28,12 @@ jobs:
 
     - name: run unit tests
       working-directory: ${{ github.workspace }}
-      run: pytest -s -v ${{ github.workspace }}/tests
+      run:  |
+        ls -l ${{ github.workspace }}
+        ls -l ${{ github.workspace }}/tests
+        ls -l ${{ github.workspace }}/tests/test_configs.py
+        pytest -s -v ${{ github.workspace }}/tests/test_configs.py
+#        pytest -s -v ${{ github.workspace }}/tests
 
     - name: run examples
       working-directory: ${{ github.workspace }}
