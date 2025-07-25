@@ -27,7 +27,8 @@ jobs:
         pip install pytest pytest-cov anyio
         # Install your package in editable mode.
         # This makes 'gtfs_railways' directly importable.
-        pip install -e .
+        #pip install -e .
+        pip install .
         pip install external_packages/osmread
         pip install external_packages/gtfspy
 
