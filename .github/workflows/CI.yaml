@@ -1,0 +1,35 @@
+name: CI Tests
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: macos-latest # Or ubuntu-latest, depending on your needs
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      # Do not specify 'path' here. By default, the repository will be cloned
+      # into ${{ github.workspace }}/<your_repo_name_gtfs_railways>/
+      # so your project root will be ${{ github.workspace }}/gtfs_railways/
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies and package
+      # Set the working directory to your project's root.
+      # This is the 'gtfs_railways' folder that contains 'setup.py' and the 'gtfs_railways' package folder.
+      working-directory: ${{ github.workspace }}/gtfs_railways
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov anyio
+        # Install your package in editable mode.
+        # This makes 'gtfs_railways' directly importable.
+        pip install -e .
+
+    - name: Run tests
+      # Run pytest from the same project root.
+      working-directory: ${{ github.workspace }}/gtfs_railways
+      run: pytest -v -s
