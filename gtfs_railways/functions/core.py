@@ -637,3 +637,89 @@ def get_runtime(version_label, run_func, subgraphs,
             print(f"{version_label} - Size {size}: Total runtime {total_time:.4f} seconds\n")
 
     return runtimes
+
+def compute_graph_features(L):
+    """
+    Compute various graph features of a subgraph L:
+    - number of unique route-direction pairs
+    - average in-degree
+    - average out-degree
+    - number of strongly connected components
+    - size of largest strongly connected component
+    - diameter (of largest SCC, or None if not connected)
+    - average shortest path length (of largest SCC, or None if not connected)
+    - average clustering coefficient
+    - number of bridges (considering undirected version)
+
+    Args:
+        L: networkx.DiGraph with edges having 'route_I_counts' and optionally 'direction_id'
+
+    Returns:
+        dict: features with keys:
+            'route_dir_pairs': int
+            'avg_in_degree': float
+            'avg_out_degree': float
+            'num_scc': int
+            'largest_scc_size': int
+            'diameter': int or None
+            'avg_shortest_path_len': float or None
+            'avg_clustering_coeff': float
+            'num_bridges': int
+    """
+    # Route-direction pairs
+    route_dir_pairs = set()
+    for _, _, edge_data in L.edges(data=True):
+        route_counts = edge_data.get('route_I_counts', {})
+        dir_dict = edge_data.get('direction_id', {})
+        for route in route_counts.keys():
+            if dir_dict:
+                for direction in dir_dict.keys():
+                    route_dir_pairs.add((route, direction))
+            else:
+                route_dir_pairs.add((route, None))
+
+    # Degrees
+    avg_in_degree = sum(dict(L.in_degree()).values()) / L.number_of_nodes() if L.number_of_nodes() > 0 else 0
+    avg_out_degree = sum(dict(L.out_degree()).values()) / L.number_of_nodes() if L.number_of_nodes() > 0 else 0
+
+    # Strongly connected components (SCCs)
+    sccs = list(nx.strongly_connected_components(L))
+    num_scc = len(sccs)
+    largest_scc = max(sccs, key=len) if sccs else set()
+    largest_scc_size = len(largest_scc)
+
+    # Subgraph of largest SCC
+    L_scc = L.subgraph(largest_scc).copy() if largest_scc else None
+
+    # Diameter and average shortest path length (only if connected)
+    diameter = None
+    avg_shortest_path_len = None
+    if L_scc and largest_scc_size > 1:
+        # For directed graphs, check if strongly connected
+        if nx.is_strongly_connected(L_scc):
+            diameter = nx.diameter(L_scc.to_undirected())
+            avg_shortest_path_len = nx.average_shortest_path_length(L_scc)
+        else:
+            # Diameter and avg shortest path undefined if not strongly connected
+            diameter = None
+            avg_shortest_path_len = None
+
+    # Average clustering coefficient (undirected)
+    L_undirected = L.to_undirected()
+    avg_clustering_coeff = nx.average_clustering(L_undirected)
+
+    # Bridges (cut edges) in undirected graph
+    bridges = list(nx.bridges(L_undirected))
+    num_bridges = len(bridges)
+
+    return {
+        'route_dir_pairs': len(route_dir_pairs),
+        'avg_in_degree': avg_in_degree,
+        'avg_out_degree': avg_out_degree,
+        'num_scc': num_scc,
+        'largest_scc_size': largest_scc_size,
+        'diameter': diameter,
+        'avg_shortest_path_len': avg_shortest_path_len,
+        'avg_clustering_coeff': avg_clustering_coeff,
+        'num_bridges': num_bridges
+    }
