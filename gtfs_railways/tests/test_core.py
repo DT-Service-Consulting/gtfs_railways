@@ -56,10 +56,9 @@ def test_travel_cost_v0(travel_cost_example_v0):
     For version 0 of the travel cost function, we expect the output to be a dictionary with THREE levels
     """
 
-    travel_cost_v0 = travel_cost_example_v0
-    result_v0 = travel_cost_v0[326][298][0]
+    result_v0 = travel_cost_example_v0[326][298][0]
 
-    assert isinstance(travel_cost_v0, dict)
+    assert isinstance(result_v0, dict)
     assert result_v0['GTC'] == 217
     assert result_v0['in_vehicle'] == 27
 
@@ -70,10 +69,9 @@ def test_travel_cost(travel_cost_example):
     For version 1 and above of the travel cost function, we expect the output to be a dictionary with THREE levels
     """
 
-    travel_cost = travel_cost_example
-    result = travel_cost[326][298]
+    result = travel_cost_example[326][298]
 
-    assert isinstance(travel_cost, dict)
+    assert isinstance(result, dict)
     assert result['GTC'] == 217
     assert result['in_vehicle'] == 27
     assert result['n_transfers'] == 0
@@ -81,8 +79,9 @@ def test_travel_cost(travel_cost_example):
     assert result['traveled_distance'] == 30336
     assert result['waiting_time'] == 95
 
-    result = travel_cost[300][299]
-    assert isinstance(travel_cost, dict)
+    result = travel_cost_example[300][299]
+
+    assert isinstance(result, dict)
     assert result['GTC'] == 34
     assert result['in_vehicle'] == 4
     assert result['n_transfers'] == 0
