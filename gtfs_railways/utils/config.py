@@ -8,7 +8,3 @@ PROJECT_ROOT = CURRENT_FILE.parents[2]  # Assuming utils/ inside gtfs_railways/
 FUNCTION_DIR = PROJECT_ROOT / 'gtfs_railways/functions'
 DATA_DIR = PROJECT_ROOT / 'gtfs_railways/data'
 EXAMPLES_DIR = PROJECT_ROOT / 'gtfs_railways/examples'
-
-print(PROJECT_ROOT)
-print(PROJECT_ROOT)
-print(PROJECT_ROOT)
