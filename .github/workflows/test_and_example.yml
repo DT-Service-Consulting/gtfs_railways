@@ -10,16 +10,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: List files and print working directory
-      run:  | 
-        ls 
-        pwd
-        echo "Current directory: ${{ github.workspace }}"
-        ls ${{ github.workspace }}/gtfs_railways/examples/example_01.py
-        ls /gtfs_railways/tests/test_config.py
-        
-        
-
     - name: Set up Python 3.8
       uses: actions/setup-python@v5
       with:
