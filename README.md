@@ -18,6 +18,14 @@ Install the package from PyPI using pip:
 pip install gtfs-railways
 ```
 
+In its current state, the package requires some external packages to be installed manually. 
+You can install them using pip as follows:
+
+```bash
+pip gtfs_railways/external_packages/osmread
+pip gtfs_railways/external_packages/gtfspy
+```
+
 ## Examples
 
 - **example_01.py**

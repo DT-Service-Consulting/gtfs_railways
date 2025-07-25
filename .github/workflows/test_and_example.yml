@@ -31,7 +31,7 @@ jobs:
 
       - name: run unit tests
         run: |
-          pytest -s gtfs_railways/tests/test_config.py
+          pytest --rootdir=. -s gtfs_railways/tests/test_config.py
           working-directory: %{{ github.workspace }}
 
       - name: run examples
