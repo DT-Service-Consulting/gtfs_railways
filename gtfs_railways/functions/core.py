@@ -725,7 +725,6 @@ def compute_graph_features(L):
     }
 
 def get_efficiency_curves(
-    attributes,
     subgraphs,
     versions_sp_func,
     target_size=15,
