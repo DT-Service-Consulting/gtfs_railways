@@ -30,9 +30,9 @@ jobs:
       working-directory: ${{ github.workspace }}
       run:  |
         ls -l ${{ github.workspace }}
-        ls -l ${{ github.workspace }}/tests
-        ls -l ${{ github.workspace }}/tests/test_configs.py
-        pytest -s -v ${{ github.workspace }}/tests/test_configs.py
+        ls -l ${{ github.workspace }}/gtfs_railways/tests
+        ls -l ${{ github.workspace }}/gtfs_railways/tests/test_configs.py
+        pytest -s -v ${{ github.workspace }}/gtfs_railways/tests/test_configs.py
 #        pytest -s -v ${{ github.workspace }}/tests
 
     - name: run examples
