@@ -29,6 +29,12 @@ jobs:
           pip install external_packages/osmread
           pip install external_packages/gtfspy
 
+      - name: Set PYTHONPATH
+        run: |
+          echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "I am using $PYTHONPATH"
+          echo "full env: $GITHUB_ENV"
+
       - name: run unit tests
         run: |
           pytest --rootdir=. -s gtfs_railways/tests/test_config.py
