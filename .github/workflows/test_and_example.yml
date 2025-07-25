@@ -16,7 +16,7 @@ jobs:
         pwd
         echo "Current directory: ${{ github.workspace }}"
         ls ${{ github.workspace }}/gtfs_railways/examples/example_01.py
-        ls ${{ github.workspace }}/gtfs_railways/tests/test_config.py
+        ls /gtfs_railways/tests/test_config.py
         
         
 
@@ -40,6 +40,7 @@ jobs:
 #      run: pytest -s gtfs_railways/tests/test_config.py
 
     - name: run examples
+      working-directory: ${{ github.workspace }}
       run: |
           ls gtfs_railways/examples
           pwd
