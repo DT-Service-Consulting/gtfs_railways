@@ -1231,24 +1231,3 @@ def get_events(gtfs_feed,
                                 end_time_ut=range_end,
                                 route_type=mode_from_string(mode))
     return events
-
-
-def get_random_removal_nodes(graph, num_to_remove, seed=None):
-    """
-    Returns a list of nodes randomly selected from G for removal.
-
-    Parameters:
-    - G: NetworkX graph
-    - num_to_remove: Number of nodes to remove (int)
-    - seed: Optional random seed for reproducibility (int or None)
-
-    Returns:
-    - List of node IDs selected for removal
-    """
-    if num_to_remove > graph.number_of_nodes() - 2:
-        raise ValueError("Cannot remove all or almost all nodes. Reduce 'num_to_remove'.")
-
-    if seed is not None:
-        random.seed(seed)
-
-    return random.sample(list(graph.nodes()), num_to_remove)
