@@ -118,5 +118,11 @@ def test_random_removal_simulations(L_space_many, attributes_path):
     sp_func_5 = make_sp_func(attributes, get_all_GTC_5, P_space_5)
 
     results_random_0 = run_removal_simulations(subgraphs_by_size=L_graphs, sp_func=sp_func_0, num_to_remove=5, method='random', seed=42)
+    results_random_1 = run_removal_simulations(subgraphs_by_size=L_graphs, sp_func=sp_func_1, num_to_remove=5, method='random', seed=42)
+    results_random_2 = run_removal_simulations(subgraphs_by_size=L_graphs, sp_func=sp_func_2, num_to_remove=5, method='random', seed=42)
+    results_random_3 = run_removal_simulations(subgraphs_by_size=L_graphs, sp_func=sp_func_3, num_to_remove=5, method='random', seed=42)
+    results_random_4 = run_removal_simulations(subgraphs_by_size=L_graphs, sp_func=sp_func_4, num_to_remove=5, method='random', seed=42)
+    results_random_5 = run_removal_simulations(subgraphs_by_size=L_graphs, sp_func=sp_func_5, num_to_remove=5, method='random', seed=42)
 
-    
+
+    assert results_random_0['eff_after_1'][0] == results_random_1['eff_after_1'][0] == results_random_2['eff_after_1'][0] == results_random_3['eff_after_1'][0] == results_random_4['eff_after_1'][0] == results_random_5['eff_after_1'][0]
