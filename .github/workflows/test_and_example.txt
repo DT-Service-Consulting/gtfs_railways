@@ -1,0 +1,47 @@
+name: CI Tests
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: macos-latest # Or ubuntu-latest, depending on your needs
+"""
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.8'
+
+    - name: Install dependencies and package
+      # Set the working directory to your project's root.
+      # This is the 'gtfs_railways' folder that contains 'setup.py' and the 'gtfs_railways' package folder.
+      working-directory: ${{ github.workspace }}
+      run:  |  
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov anyio
+        pip install -e .
+        pip install external_packages/osmread
+        pip install external_packages/gtfspy
+
+    - name: run unit tests
+      working-directory: ${{ github.workspace }}
+      run:  |
+        ls -l ${{ github.workspace }}
+        ls -l ${{ github.workspace }}/gtfs_railways/tests
+        ls -l ${{ github.workspace }}/gtfs_railways/tests/test_config.py
+        pytest -s -v ${{ github.workspace }}/gtfs_railways/tests/test_config.py
+        pytest -s -v gtfs_railways/tests/test_config.py
+#        pytest -s -v ${{ github.workspace }}/tests
+
+    - name: run examples
+      working-directory: ${{ github.workspace }}
+      run: |
+          python -c ${{ github.workspace }}/examples/example_01.py
+          python -c ${{ github.workspace }}/examples/example_02.py
+          python -c ${{ github.workspace }}/examples/example_03.py
+          python -c ${{ github.workspace }}/examples/example_04.py
+          python -c ${{ github.workspace }}/examples/example_05.py
+"""
