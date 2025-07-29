@@ -289,6 +289,7 @@ def simulate_fixed_node_removal_efficiency(
     num_to_remove=None,
     pct_to_remove=None,  # priority over num_to_remove
     method='random',  # random or targeted or betweenness
+    removal_type='node',
     seed=None,
     verbose=False
 ):
@@ -303,29 +304,47 @@ def simulate_fixed_node_removal_efficiency(
         verbose (bool): Whether to print progress and debug information.
     """
     G = copy.deepcopy(L_graph)
-    total_nodes = G.number_of_nodes()
+
+    if removal_type == "node":
+        total_elements = G.number_of_nodes()
+    elif removal_type == "edge":
+        total_elements = G.number_of_edges()
+    else:
+        raise ValueError("Invalid removal_type. Choose 'node' or 'edge'.")
 
     if pct_to_remove is not None:
         if not (1 <= pct_to_remove <= 100):
             raise ValueError("Percentage must be between 1 and 100.")
-        num_to_remove = int(total_nodes * (pct_to_remove / 100))
+        num_to_remove = int(total_elements * (pct_to_remove / 100))
     elif num_to_remove is None:
         raise ValueError("Specify num_to_remove or pct_to_remove.")
 
-    if num_to_remove > total_nodes:
+    if num_to_remove > total_elements:
         if verbose:
-            print(f"Adjusting number of nodes to remove from {num_to_remove} to {total_nodes - 2}.")
-        num_to_remove = max(total_nodes - 2, 1)
+            print(f"Adjusting number of elements to remove from {num_to_remove} to {total_elements - 2}.")
+        num_to_remove = max(total_elements - 2, 1)
 
-    if method == "random":
-        # Here pass L_graph as g to random_node_removal (or whichever is expected)
-        return random_node_removal(L_graph, G, num_to_remove, sp_func, seed, verbose)
-    elif method == "targeted":
-        return targeted_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
-    elif method == "betweenness":
-        return betweenness_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
+    if removal_type == "node":
+        if method == "random":
+            return random_node_removal(L_graph, G, num_to_remove, sp_func, seed, verbose)
+        elif method == "targeted":
+            return targeted_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
+        elif method == "betweenness":
+            return betweenness_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
+        else:
+            raise ValueError("Invalid method. Choose 'random', 'targeted', or 'betweenness'.")
+    elif removal_type == "edge":
+        if method == "random":
+            return random_edge_removal(L_graph, G, num_to_remove, sp_func, seed, verbose)
+        elif method == "targeted":
+            return targeted_edge_removal(L_graph, G, num_to_remove, sp_func, verbose)
+        elif method == "betweenness":
+            return betweenness_edge_removal(L_graph, G, num_to_remove, sp_func, verbose)
+        else:
+            raise ValueError("Invalid method. Use 'random', 'targeted', or 'betweenness' for edge removal.")
     else:
-        raise ValueError("Invalid method. Choose 'random', 'targeted', or 'betweenness'.")
+        raise ValueError("Invalid mode. Choose 'node' or 'edge'.")
+
 
 def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
     """
@@ -405,6 +424,85 @@ def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
             print(f"Time taken: {elapsed:.4f} seconds\n")
 
     return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
+
+
+def random_edge_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
+    """
+    Randomly removes edges from a graph and tracks the impact on global efficiency.
+
+    Parameters:
+        g: Base attributes or data required by efficiency_graph.
+        G (networkx.DiGraph): The working graph from which edges will be removed.
+        num_to_remove (int): Number of edges to remove.
+        sp_func (callable): Function to compute shortest path structure.
+        seed (int, optional): Random seed.
+        verbose (bool): Whether to print logs.
+
+    Returns:
+        original_efficiency (float): Efficiency before removal.
+        efficiencies (list): Normalized efficiencies.
+        num_removed (list): Cumulative edge removals.
+        removed_edges (list): List of edges removed.
+        removal_times (list): Time taken for each step.
+        percent_remaining (list): Percentage of edges remaining.
+    """
+    if seed is not None:
+        random.seed(seed)
+
+    total_edges = G.number_of_edges()
+    if num_to_remove > total_edges:
+        if verbose:
+            print(f"Adjusting number of edges to remove from {num_to_remove} to {total_edges}.")
+        num_to_remove = total_edges
+
+    removal_edges = random.sample(list(G.edges()), num_to_remove)
+    if verbose:
+        print(f"Random edge removal order: {removal_edges}")
+
+    # Compute original efficiency
+    sp = sp_func(G)
+    original_efficiency = efficiency_graph(g, sp)
+
+    efficiencies = [1.0]
+    num_removed = [0]
+    percent_remaining = [100.0]
+    removed_edges = []
+    removal_times = []
+
+    for i, edge in enumerate(removal_edges):
+        start_time = time.perf_counter()
+        if not G.has_edge(*edge):
+            if verbose:
+                print(f"Step {i + 1}: Edge {edge} already removed, skipping.")
+            efficiencies.append(efficiencies[-1])
+            num_removed.append(num_removed[-1])
+            percent_remaining.append(100 * (1 - num_removed[-1] / total_edges))
+            continue
+
+        G.remove_edge(*edge)
+        removed_edges.append(edge)
+
+        try:
+            sp = sp_func(G)
+            eff = efficiency_graph(g, sp)
+        except Exception as e:
+            if verbose:
+                print(f"Error after removing edge {edge}: {e}")
+            break
+
+        elapsed = time.perf_counter() - start_time
+        normalized_eff = eff / original_efficiency
+
+        efficiencies.append(normalized_eff)
+        num_removed.append(num_removed[-1] + 1)
+        percent_remaining.append(100 * (1 - num_removed[-1] / total_edges))
+        removal_times.append(round(elapsed, 4))
+
+        if verbose:
+            print(f"Removed edge {edge} → Normalized Efficiency: {normalized_eff:.4f}")
+            print(f"Time taken: {elapsed:.4f} seconds\n")
+
+    return original_efficiency, efficiencies, percent_remaining, removed_edges, removal_times
 
 
 def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
@@ -500,6 +598,81 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
 
 
+def targeted_edge_removal(g, G, num_to_remove, sp_func, verbose=False):
+    """
+    Greedily removes one edge at a time to maximize efficiency drop.
+
+    Returns same structure as targeted_node_removal.
+    """
+    total_edges = G.number_of_edges()
+    sp = sp_func(G)
+    original_efficiency = efficiency_graph(G, sp)
+    if verbose:
+        print(f"Original Efficiency: {original_efficiency:.4f}")
+
+    efficiencies = [1.0]
+    num_removed = [0]
+    percent_remaining = [100.0]
+    removed_edges = []
+    removal_times = []
+
+    removals_done = 0
+    step = 0
+
+    while removals_done < num_to_remove and G.number_of_edges() > 0:
+        step += 1
+        start_time = time.perf_counter()
+
+        sp = sp_func(G)
+        current_eff = efficiency_graph(G, sp)
+        max_drop = -1
+        best_edge = None
+
+        for edge in G.edges():
+            temp_G = G.copy()
+            temp_G.remove_edge(*edge)
+            try:
+                sp_temp = sp_func(temp_G)
+                eff_temp = efficiency_graph(temp_G, sp_temp)
+                drop = current_eff - eff_temp
+                if drop > max_drop:
+                    max_drop = drop
+                    best_edge = edge
+            except:
+                continue
+
+        if best_edge is None:
+            if verbose:
+                print("No valid edge to remove at step", step)
+            break
+
+        G.remove_edge(*best_edge)
+        removed_edges.append(best_edge)
+        removals_done += 1
+
+        try:
+            sp_new = sp_func(G)
+            eff = efficiency_graph(G, sp_new)
+        except Exception as e:
+            if verbose:
+                print(f"Error after removing {best_edge}: {e}")
+            break
+
+        normalized_eff = eff / original_efficiency
+        elapsed = round(time.perf_counter() - start_time, 4)
+
+        efficiencies.append(normalized_eff)
+        num_removed.append(removals_done)
+        percent_remaining.append(100 * (1 - removals_done / total_edges))
+        removal_times.append(elapsed)
+
+        if verbose:
+            print(f"Step {step}: Removed edge {best_edge} → Normalized Efficiency: {normalized_eff:.4f}")
+            print(f"Time taken: {elapsed:.4f} seconds\n")
+
+    return original_efficiency, efficiencies, percent_remaining, removed_edges, removal_times
+
+
 def betweenness_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     """
     Removes edges of nodes based on descending betweenness centrality,
@@ -586,37 +759,97 @@ def betweenness_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
 
 
+def betweenness_edge_removal(g, G, num_to_remove, sp_func, verbose=False):
+    """
+    Removes edges based on descending edge betweenness centrality.
+
+    Returns same structure as betweenness_node_removal.
+    """
+    total_edges = G.number_of_edges()
+    sp = sp_func(G)
+    original_efficiency = efficiency_graph(G, sp)
+    if verbose:
+        print(f"Original Efficiency: {original_efficiency:.4f}")
+
+    efficiencies = [1.0]
+    num_removed = [0]
+    percent_remaining = [100.0]
+    removed_edges = []
+    removal_times = []
+
+    removals_done = 0
+    step = 0
+
+    while removals_done < num_to_remove and G.number_of_edges() > 0:
+        step += 1
+        start_time = time.perf_counter()
+
+        try:
+            centrality = nx.edge_betweenness_centrality(G, weight="duration_avg")
+        except Exception as e:
+            if verbose:
+                print(f"Step {step} failed to compute edge centrality: {e}")
+            break
+
+        if not centrality:
+            if verbose:
+                print("No edges left with nonzero centrality.")
+            break
+
+        edge_to_remove = max(centrality, key=centrality.get)
+        G.remove_edge(*edge_to_remove)
+        removed_edges.append(edge_to_remove)
+        removals_done += 1
+
+        try:
+            sp = sp_func(G)
+            eff = efficiency_graph(G, sp)
+        except Exception as e:
+            if verbose:
+                print(f"Error evaluating efficiency after removing {edge_to_remove}: {e}")
+            break
+
+        normalized_eff = eff / original_efficiency
+        elapsed = round(time.perf_counter() - start_time, 4)
+
+        efficiencies.append(normalized_eff)
+        num_removed.append(removals_done)
+        percent_remaining.append(100 * (1 - removals_done / total_edges))
+        removal_times.append(elapsed)
+
+        if verbose:
+            print(f"Step {step}: Removed edge {edge_to_remove} (Centrality: {centrality[edge_to_remove]:.4f})")
+            print(f"Normalized Efficiency: {normalized_eff:.4f}")
+            print(f"Time taken: {elapsed:.4f} seconds\n")
+
+    return original_efficiency, efficiencies, percent_remaining, removed_edges, removal_times
+
+
 def run_removal_simulations(
     subgraphs_by_size,
     num_to_remove=None,
     pct_to_remove=None,
     method='random',
+    removal_type='node',  # NEW
     seed=42,
     verbose=False,
     sp_func=None,
 ):
     """
-    Run node removal simulations across all subgraphs grouped by size and collect efficiency and timing metrics.
+    Run node or edge removal simulations across subgraphs and collect efficiency and timing metrics.
 
     Parameters:
-        g (networkx.Graph): The original graph used to compute baseline efficiency.
-        subgraphs_by_size (dict): A dictionary where each key is a subgraph size and each value is a list of subgraphs (networkx.Graph).
-        num_to_remove (int): Number of nodes to remove from each subgraph. Default is 5.
-        seed (int): Random seed for reproducibility. Default is 42.
-        verbose (bool): Whether to print detailed output during simulation. Default is False.
+        subgraphs_by_size (dict): Dictionary mapping subgraph sizes to lists of subgraphs (nx.Graph).
+        num_to_remove (int): Fixed number of nodes or edges to remove. Optional if pct_to_remove is set.
+        pct_to_remove (float): Percentage of nodes or edges to remove. Optional if num_to_remove is set.
+        method (str): Removal strategy: 'random', 'targeted', or 'betweenness'.
+        removal_type (str): Either 'node' or 'edge'.
+        seed (int): Random seed for reproducibility.
+        verbose (bool): Verbose logging for debug.
+        sp_func (function): Shortest path structure calculator.
 
     Returns:
-        pd.DataFrame: A DataFrame where each row corresponds to one subgraph simulation and contains:
-            - graph_index: Index of the subgraph within its group
-            - num_nodes: Number of nodes in the subgraph
-            - num_edges: Number of edges in the subgraph
-            - runtime_seconds: Total time taken for the simulation
-            - original_efficiency: Efficiency before any node removal
-            - final_efficiency: Efficiency after all removals
-            - efficiency_after_each_removal: List of normalized efficiencies after each removal (excluding original)
-            - removed_nodes: List of removed node IDs
-            - removal_times: List of cumulative times after each removal
-            - eff_after_{i}: Normalized efficiency after i-th removal, where i=0 is the original
+        pd.DataFrame: DataFrame where each row is a subgraph simulation.
     """
     results = []
 
@@ -625,12 +858,13 @@ def run_removal_simulations(
             start = time.perf_counter()
 
             try:
-                original_efficiency, efficiencies, num_removed, removed_nodes, removal_times = (
+                original_efficiency, efficiencies, num_removed, removed_entities, removal_times = (
                     simulate_fixed_node_removal_efficiency(
                         L_graph=L,
                         num_to_remove=num_to_remove,
                         pct_to_remove=pct_to_remove,
                         method=method,
+                        removal_type=removal_type,
                         seed=seed,
                         verbose=verbose,
                         sp_func=sp_func
@@ -652,8 +886,11 @@ def run_removal_simulations(
                 "original_efficiency": original_efficiency,
                 "final_efficiency": efficiencies[-1] if efficiencies else None,
                 "efficiency_after_each_removal": efficiencies[1:] if len(efficiencies) > 1 else [],
-                "removed_nodes": removed_nodes,
-                "remova l_times": removal_times
+                "removed_entities": removed_entities,  # renamed for generality
+                "removal_times": removal_times,
+                "removal_type": removal_type,
+                "removal_method": method,
+                "removal_count": len(removed_entities)
             }
 
             for i, eff in enumerate(efficiencies):
@@ -665,6 +902,7 @@ def run_removal_simulations(
 
 def get_runtime(version_label, run_func, subgraphs, 
                 method, sp_func, seed, num_to_remove=None, pct_to_remove=None,
+                removal_type='node',  # Added removal_type parameter
                 target_sizes=None, verbose=False):
     """
     Runs `run_func` on subgraphs and measures runtimes per subgraph.
@@ -674,6 +912,7 @@ def get_runtime(version_label, run_func, subgraphs,
     - run_func: function to run (e.g. run_removal_simulations)
     - subgraphs: dict {size: [subgraph1, subgraph2, ...]}
     - num_to_remove, pct_to_remove, method, sp_func, seed: params to pass to run_func
+    - removal_type: 'node' or 'edge' removal mode
     - target_sizes: list or int or None to specify sizes to run, else all sizes
     - verbose: whether to print timing info
 
@@ -708,8 +947,10 @@ def get_runtime(version_label, run_func, subgraphs,
                 num_to_remove=num_to_remove,
                 pct_to_remove=pct_to_remove,
                 method=method,
+                removal_type=removal_type,   # Pass removal_type here
                 sp_func=sp_func,
-                seed=seed
+                seed=seed,
+                verbose=verbose
             )
             end = time.perf_counter()
             duration = end - start
@@ -723,6 +964,7 @@ def get_runtime(version_label, run_func, subgraphs,
             print(f"{version_label} - Size {size}: Total runtime {total_time:.4f} seconds\n")
 
     return runtimes
+
 
 def compute_graph_features(L):
     """
