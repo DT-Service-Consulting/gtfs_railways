@@ -36,7 +36,8 @@ setup(
         'thefuzz',
         'ipython',
         'pytest',
-        'pytest-cov'
+        'pytest-cov',
+        'scipy'
     ],
     classifiers=[
         'License :: Apache 2.0',
