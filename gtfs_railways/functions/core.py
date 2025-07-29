@@ -12,6 +12,69 @@ import random
 import pandas as pd # type: ignore
 from collections import deque
 from functools import wraps
+from statistics import mean
+
+# GTFS Modes
+mode_name={0: 'Tram',
+    1: 'Subway',
+    2: 'Rail', 
+    3: 'Bus', 
+    4: 'Ferry',
+    5: 'Cable Car',
+    6: 'Gondola', 
+    7: 'Funicular',
+    8: 'Horse Carriage',
+    9: 'Intercity Bus',
+    10: 'Commuter Train',
+    11: 'Trolleybus', 
+    12: 'Monorail', 
+    99: 'Aircraft',
+    100: 'Railway Service',
+    101: 'High Speed Rail',
+    102: 'Long Distance Trains',
+    103: 'Inter Regional Rail Service',
+    105: 'Sleeper Rail Service', 
+    106: 'Regional Rail Service',
+    107: 'Tourist Railway Service',
+    108: 'Rail Shuttle', 
+    109: 'Suburban Railway',
+    200: 'CoachService', 
+    201: 'InternationalCoach',
+    202: 'NationalCoach',
+    204: 'RegionalCoach',
+    208: 'CommuterCoach',
+    400: 'UrbanRailwayService',
+    401: 'Metro', 
+    402: 'Underground', 
+    403: 'Urban Railway Service',
+    405: 'Monorail', 
+    700: 'BusService',
+    701: 'RegionalBus',
+    702: 'ExpressBus',
+    704: 'LocalBus',
+    715: 'Demand and Response Bus Service',
+    717: 'Share Taxi Service', 
+    800: 'TrolleybusService',
+    900: 'TramService', 
+    1000: 'WaterTransportService', 
+    1100: 'AirService', 
+    1300: 'TelecabinService', 
+    1400: 'FunicularService', 
+    1500: 'TaxiService',
+    1501: 'CommunalTaxi',
+    1700: 'MiscellaneousService',
+    1701: 'CableCar', 
+    1702: 'HorseDrawnCarriage'}
+    
+mode_code = {v: k for k, v in mode_name.items()}
+
+def mode_to_string(mode):
+    return mode_name[mode]
+
+def mode_from_string(mode_str):
+    return mode_code[mode_str]
+
+#####################################################
 
 def compute_time(func):
     @wraps(func)
@@ -820,3 +883,62 @@ def get_random_removal_nodes(graph, num_to_remove, seed=None):
         random.seed(seed)
 
     return random.sample(list(graph.nodes()), num_to_remove)
+
+def average_waiting_time_per_line_per_direction(P):
+    routes={}
+    for e in P.edges(data=True):
+        for r in e[2]["veh"]:
+            for d in e[2]["veh"][r]:
+                if r not in routes:
+                    routes[r]={}
+                if d not in routes[r]:
+                    routes[r][d]=[]
+                routes[r][d].append(e[2]["veh"][r][d])
+
+    #Average all number of vehicles per line per direction
+    #Compute waiting time as half the headway
+    for r in routes:
+        for d in routes[r]:
+            routes[r][d]=(60/mean(routes[r][d]))/2
+    return routes
+    
+    
+def average_speed_network(L):
+    speeds=[]
+    for e in L.edges(data=True):
+        speeds.append((e[2]["d"]/1000)/(e[2]["duration_avg"]/3600))
+    return mean(speeds)
+
+def get_events(gtfs_feed,
+               mode,
+               start_hour=5, 
+               end_hour=24):
+               
+    '''Gets all events for the most suitable day from GTFS data. Parameters:
+    gtfs_feed: a gtfspy gtfs feed object
+    mode: string corresponding to the transport mode that we want to consider
+    start_hour: integer with the earliest hour we want to consider (in 0..24)
+    end_hour: integer with the latest hour we want to consider (in 0..24, larger that start_hour)'''
+
+    if not (start_hour>=0 and end_hour>=0):
+        raise AssertionError("Start/end hour should be larger or equal to 0")
+    if not (start_hour<=24 and end_hour<=24):
+        raise AssertionError("Start/end hour should be smaller or equal to 24")
+    if not (start_hour<end_hour):
+        raise AssertionError("Start hour should be smaller than end hour")
+    if not (isinstance(start_hour, int) and isinstance(end_hour, int)):
+        raise AssertionError("Start/end hours should be int")
+    if not (mode in mode_code and mode_from_string(mode) in gtfs_feed.get_modes()):
+        raise AssertionError("Mode is not available for the city")    
+    
+    day_start=gtfs_feed.get_suitable_date_for_daily_extract(ut=True)
+    range_start= day_start + start_hour*3600
+    range_end = day_start + end_hour*3600-1
+    
+    print("Considering trips between %s and %s"%(gtfs_feed.unixtime_seconds_to_gtfs_datetime(range_start),
+                                         gtfs_feed.unixtime_seconds_to_gtfs_datetime(range_end)))
+
+    events = gtfs_feed.get_transit_events(start_time_ut=range_start,
+                                end_time_ut=range_end,
+                                route_type=mode_from_string(mode))
+    return events
