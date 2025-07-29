@@ -868,7 +868,7 @@ def get_efficiency_curves(
 
                 for idx, row in df_size.iterrows():
                     version_curves[label][size].append({
-                        'curve': row['efficiency_after_each_removal'],
+                        'curve': [1.0] + row['efficiency_after_each_removal'],
                         'removed_nodes': row['removed_nodes'],
                         'time': elapsed,
                         'seed': seed,
