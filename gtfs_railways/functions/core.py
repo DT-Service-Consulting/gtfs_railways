@@ -102,6 +102,14 @@ def load_graph(path):
         G = pickle.load(f)
         return G
     
+def save_graph(G,path):
+    #Rename nodes to 0..n
+    G_res=nx.convert_node_labels_to_integers(G)
+    #nx.write_gpickle(G_res,path)    
+
+    with open(path, 'wb') as f:
+        pickle.dump(G_res, f)
+    
 def extract_directed_subgraph(G, target_size, min_edges=3, seed=None):
     if seed is not None:
         random.seed(seed)
