@@ -13,6 +13,13 @@ import pandas as pd # type: ignore
 from collections import deque
 from functools import wraps
 from statistics import mean
+from scipy import stats # type: ignore
+import matplotlib.pyplot as plt # type: ignore
+import numpy as np
+from bokeh.plotting import figure, show, from_networkx # type: ignore
+from bokeh.models import HoverTool, Circle, MultiLine, WheelZoomTool # type: ignore
+from bokeh.tile_providers import Vendors # type: ignore
+from pyproj import Transformer # type: ignore
 
 # GTFS Modes
 mode_name={0: 'Tram',
@@ -950,3 +957,182 @@ def get_events(gtfs_feed,
                                 end_time_ut=range_end,
                                 route_type=mode_from_string(mode))
     return events
+
+def save_gtc_to_pkl(gtc, filename):
+    """
+    Save the Global Transit Cost (GTC) data to a pickle file.
+
+    Parameters:
+        gtc: The GTC data to save (the output of get_all_GTC).
+        filename: The name of the pickle file where the GTC data will be saved (default is "gtc_data.pkl").
+    """
+    with open(filename, 'wb') as f:
+        pickle.dump(gtc, f)
+    print(f"GTC data saved to {filename}")
+
+def load_gtc_from_pkl(filename):
+    """
+    Load the Global Transit Cost (GTC) data from a pickle file.
+
+    Parameters:
+        filename: The name of the pickle file to load the GTC data from (default is "gtc_data.pkl").
+
+    Returns:
+        gtc: The loaded GTC data.
+    """
+    with open(filename, 'rb') as f:
+        gtc = pickle.load(f)
+    print(f"GTC data loaded from {filename}")
+    return gtc
+
+def betweenness_fit_revised(L, weight=None, confidence=.99, plot=False):
+    raw = list(nx.betweenness_centrality(L,weight=weight,normalized=False).values())
+    
+    #data = [float(i)/sum(raw) for i in raw]
+    data = [float(i)/max(raw) for i in raw]
+    
+    # Fitting an exponential distribution to the data
+    params = stats.expon.fit(data)
+
+    #print(params)
+    #print("Lambda: %f"%(1/params[1]))
+
+    fitted_distribution = stats.expon(*params)
+
+    # Performing the K-S test
+    ks_statistic, p_value = stats.kstest(data, fitted_distribution.cdf)
+
+    # Printing the results
+    #print("KS Statistic:", ks_statistic)
+    #print("P-Value:", p_value)
+    
+    ###############
+    
+    if plot:
+        plt.clf()
+        # Create an array of values for the x-axis
+        x = np.linspace(0, max(data), 1000)
+
+        # Calculate the ECDF of the original data
+        ecdf_data = np.arange(1, len(data) + 1) / len(data)
+
+        # Calculate the CDF of the fitted exponential distribution
+        cdf_fitted = stats.expon.cdf(x, *params)
+
+        # Plot the ECDF of the original data
+        plt.step(sorted(data), ecdf_data, label='ECDF of Original Data', color='b')
+
+        # Plot the CDF of the fitted exponential distribution
+        plt.plot(x, cdf_fitted, 'r-', lw=2, label='Fitted Exponential CDF')
+
+        # Add labels and a legend
+        plt.xlabel('Value')
+        plt.ylabel('Probability')
+        if p_value>(1-confidence):
+            plt.title("Lambda: %f"%(1/params[1]))
+        else:
+            plt.title("Lambda: NaN")     
+        
+        plt.legend()
+
+        # Show the plot
+        # if weight:
+        #     plt.savefig("plot_fit_w_%s.png"%plot,bbox_inches="tight")
+        # else:
+        #     plt.savefig("plot_fit_%s.png"%plot,bbox_inches="tight")
+            
+    
+    if p_value>(1-confidence):
+        return 1/params[1]
+    else:
+        return np.NaN
+    
+def meshedness(graph):
+    """
+    Calculates meshedness of a graph.
+    """
+    graph2=graph.to_undirected() #Convert graph to undirected
+    e = graph2.number_of_edges()
+    v = graph2.number_of_nodes()
+    return (e - v + 1) / (2 * v - 5)
+
+def plot_graph_highlight_node(G, highlight_nodes=None, back_map="OSM"):
+    p = figure(
+        height=600,
+        width=950,
+        toolbar_location='below',
+        tools="pan,wheel_zoom,box_zoom,reset,save"
+    )
+    p.toolbar.active_scroll = p.select_one(WheelZoomTool)
+
+    # Convert lat/lon to Web Mercator if OSM is used
+    pos_dict = {}
+    transformer = Transformer.from_crs("epsg:4326", "epsg:3857")
+    for i, d in G.nodes(data=True):
+        if back_map == "OSM":
+            x2, y2 = transformer.transform(float(d["lat"]), float(d["lon"]))
+        else:
+            x2, y2 = float(d["lon"]), float(d["lat"])
+        pos_dict[int(i)] = (x2, y2)
+
+    graph = from_networkx(G, layout_function=pos_dict)
+
+    # Prepare node renderer data (include all node attributes)
+    node_data = {key: [] for key in list(next(iter(G.nodes(data=True)))[1].keys())}
+    node_data['index'] = []
+    node_data['color'] = []
+    node_data['size'] = []
+
+    for node, attrs in G.nodes(data=True):
+        node_data['index'].append(node)
+        for key in node_data.keys():
+            if key in ['index', 'color', 'size']:
+                continue
+            node_data[key].append(attrs.get(key, None))
+        node_data['color'].append("red" if node in highlight_nodes else "skyblue")
+        node_data['size'].append(15 if node in highlight_nodes else 5)
+
+    graph.node_renderer.data_source.data = node_data
+    graph.node_renderer.glyph = Circle(size="size", fill_color="color")
+    graph.edge_renderer.glyph = MultiLine(line_color="gray", line_alpha=0.4, line_width=1)
+
+    # Dynamically create tooltips from available node attributes
+    tooltips = [(k, f"@{k}") for k in node_data if k not in ['color', 'size']]
+    p.add_tools(HoverTool(tooltips=tooltips))
+
+    if back_map == "OSM":
+        p.add_tile(Vendors.CARTODBPOSITRON)  # Use this directly instead of get_provider
+
+    p.renderers.append(graph)
+    show(p)
+
+def plot_top_hubs(graph, top_n=10, seed=42):
+    """
+    Identify and visualize the top hubs, highlight them, and return a DataFrame with node details.
+    
+    Parameters:
+        graph (nx.Graph): Input graph.
+        top_n (int): Number of top hubs to highlight.
+        seed (int): Random seed for layout consistency.
+    """
+    # Compute degree and identify top hubs
+    core_degrees = dict(graph.degree())
+    top_hubs = sorted(core_degrees.items(), key=lambda x: x[1], reverse=True)[:top_n]
+    top_hub_nodes = [node for node, _ in top_hubs]
+    
+    # Create a DataFrame for the top hubs with node and degree information
+    top_hub_df = pd.DataFrame(top_hubs, columns=['Node', 'Degree'])
+    
+    # Add 'Node Name'
+    top_hub_df['Node Name'] = top_hub_df['Node'].apply(lambda node: graph.nodes[node].get('name', f"Node {node}"))
+    
+    # Select only the columns we want: Node, Node Name, Degree
+    top_hub_df = top_hub_df[['Node', 'Node Name', 'Degree']]
+    
+    # Sort by degree in descending order
+    top_hub_df = top_hub_df.sort_values(by="Degree", ascending=False)
+    
+    # Highlight the top hubs in the graph
+    plot_graph_highlight_node(graph, highlight_nodes=top_hub_nodes)
+
+    return top_hub_df
