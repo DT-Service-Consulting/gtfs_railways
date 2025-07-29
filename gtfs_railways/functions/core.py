@@ -830,7 +830,7 @@ def run_removal_simulations(
     num_to_remove=None,
     pct_to_remove=None,
     method='random',
-    removal_type='node',  # NEW
+    removal_type='node',
     seed=42,
     verbose=False,
     sp_func=None,
@@ -1055,6 +1055,10 @@ def compute_graph_features(L):
 def get_efficiency_curves(
     subgraphs,
     versions_sp_func,
+    removal_type='node',
+    method='random',
+    num_to_remove=None,
+    pct_to_remove=None,
     target_size=15,
     num_seeds=5,
     seeds=None
@@ -1103,8 +1107,10 @@ def get_efficiency_curves(
 
             df = run_removal_simulations(
                 subgraphs_by_size=subgraphs_to_run,
-                pct_to_remove=50,
-                method='random',
+                removal_type=removal_type,
+                method=method,
+                num_to_remove=num_to_remove,
+                pct_to_remove=pct_to_remove,
                 seed=seed,
                 sp_func=sp_func,
                 verbose=False,
@@ -1119,7 +1125,7 @@ def get_efficiency_curves(
                 for idx, row in df_size.iterrows():
                     version_curves[label][size].append({
                         'curve': [1.0] + row['efficiency_after_each_removal'],
-                        'removed_nodes': row['removed_nodes'],
+                        'removed_nodes': row['removed_entities'],
                         'time': elapsed,
                         'seed': seed,
                         'graph_index': row['graph_index']
