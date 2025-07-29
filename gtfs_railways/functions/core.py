@@ -346,10 +346,12 @@ def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
         num_removed (list of int): Step count corresponding to each edge-removal step.
         removed_nodes (list of node): List of nodes whose edges were removed in the order of removal.
         removal_times (list of float): Time taken (in seconds) for each removal step.
+        percent_remaining (list of float): Percentage of nodes remaining at each step.
     """
     if seed is not None:
         random.seed(seed)
 
+    total_nodes = G.number_of_nodes()  # Save original node count for percentage calculation
     removal_nodes = random.sample(list(G.nodes()), num_to_remove)
 
     if verbose:
@@ -357,34 +359,34 @@ def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
 
     # Compute initial global efficiency on original graph
     sp = sp_func(G)
-    original_efficiency = efficiency_graph(g, sp)  # Use g here, not G
+    original_efficiency = efficiency_graph(g, sp)
     if verbose:
         print(f"Original Efficiency: {original_efficiency}")
 
     efficiencies = [1.0]
     num_removed = [0]
+    percent_remaining = [100.0]  # Start at 100%
     removed_nodes = []
     removal_times = []
 
     for i, node in enumerate(removal_nodes):
         start_time = time.perf_counter()
 
-        # Skip if node already isolated
         if G.degree(node) == 0:
             if verbose:
                 print(f"Step {i + 1}: Node {node} already isolated, skipping.")
             efficiencies.append(efficiencies[-1])
             num_removed.append(num_removed[-1])
+            percent_remaining.append(100 * (1 - num_removed[-1] / total_nodes))
             continue
 
-        # Remove edges connected to node
         edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
         G.remove_edges_from(edges_to_remove)
         removed_nodes.append(node)
 
         try:
             sp = sp_func(G)
-            eff = efficiency_graph(g, sp)  # Use g here, not G
+            eff = efficiency_graph(g, sp)
         except Exception as e:
             if verbose:
                 print(f"Error after removing edges of {node}: {e}")
@@ -394,14 +396,15 @@ def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
         normalized_eff = eff / original_efficiency
 
         efficiencies.append(normalized_eff)
-        num_removed.append(i + 1)
+        num_removed.append(num_removed[-1] + 1)
+        percent_remaining.append(100 * (1 - num_removed[-1] / total_nodes))
         removal_times.append(round(elapsed, 4))
 
         if verbose:
             print(f"Removed edges of {node} → Normalized Efficiency: {normalized_eff:.4f}")
             print(f"Time taken: {elapsed:.4f} seconds\n")
 
-    return original_efficiency, efficiencies, num_removed, removed_nodes, removal_times
+    return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
 
 
 def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
@@ -423,6 +426,7 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
         removal_times (list): Step-wise durations.
     """
     # Compute initial SP and efficiency
+    total_nodes = G.number_of_nodes()  # for percent remaining calculation
     sp = sp_func(G)
     original_efficiency = efficiency_graph(G, sp)
     if verbose:
@@ -430,6 +434,7 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
 
     efficiencies = [1.0]
     num_removed = [0]
+    percent_remaining = [100.0]
     removed_nodes = []
     removal_times = []
 
@@ -485,13 +490,14 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
 
         efficiencies.append(normalized_eff)
         num_removed.append(removals_done)
+        percent_remaining.append(100 * (1 - removals_done / total_nodes))
         removal_times.append(elapsed)
 
         if verbose:
             print(f"Step {step}: Removed edges of {best_node} → Normalized Efficiency: {normalized_eff:.4f}")
             print(f"Time taken: {elapsed:.4f} seconds\n")
 
-    return original_efficiency, efficiencies, num_removed, removed_nodes, removal_times
+    return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
 
 
 def betweenness_node_removal(g, G, num_to_remove, sp_func, verbose=False):
@@ -513,6 +519,7 @@ def betweenness_node_removal(g, G, num_to_remove, sp_func, verbose=False):
         removed_nodes (list): Node IDs removed (edge-deleted).
         removal_times (list): Time taken per step (in seconds).
     """
+    total_nodes = G.number_of_nodes()
     sp = sp_func(G)
     original_efficiency = efficiency_graph(G, sp)
     if verbose:
@@ -520,6 +527,7 @@ def betweenness_node_removal(g, G, num_to_remove, sp_func, verbose=False):
 
     efficiencies = [1.0]
     num_removed = [0]
+    percent_remaining = [100.0]
     removed_nodes = []
     removal_times = []
 
@@ -537,7 +545,6 @@ def betweenness_node_removal(g, G, num_to_remove, sp_func, verbose=False):
                 print(f"Step {step} failed to compute centrality: {e}")
             break
 
-        # Filter isolated nodes
         centrality = {
             node: score for node, score in centrality.items()
             if (G.in_degree(node) > 0 or G.out_degree(node) > 0)
@@ -568,6 +575,7 @@ def betweenness_node_removal(g, G, num_to_remove, sp_func, verbose=False):
 
         efficiencies.append(normalized_eff)
         num_removed.append(removals_done)
+        percent_remaining.append(100 * (1 - removals_done / total_nodes))
         removal_times.append(elapsed)
 
         if verbose:
@@ -575,7 +583,7 @@ def betweenness_node_removal(g, G, num_to_remove, sp_func, verbose=False):
             print(f"Normalized Efficiency: {normalized_eff:.4f}")
             print(f"Time taken: {elapsed:.4f} seconds\n")
 
-    return original_efficiency, efficiencies, num_removed, removed_nodes, removal_times
+    return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
 
 
 def run_removal_simulations(
