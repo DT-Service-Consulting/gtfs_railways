@@ -36,4 +36,5 @@ jobs:
     - name: Run tests
       # Run pytest from the same project root.
       working-directory: ${{ github.workspace }}
-      run: pytest -v -s gtfs_railways/tests
+      run: pytest --rootdir=. -v -s gtfs_railways/tests
+
