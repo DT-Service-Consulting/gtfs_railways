@@ -17,12 +17,13 @@ from scipy import stats # type: ignore
 import matplotlib.pyplot as plt # type: ignore
 import numpy as np
 from bokeh.plotting import figure, show, from_networkx # type: ignore
-from bokeh.models import HoverTool, Circle, MultiLine, WheelZoomTool, Range1d # type: ignore
+from bokeh.models import HoverTool, Circle, MultiLine, WheelZoomTool, Range1d, DataRange1d, Button, EdgesAndLinkedNodes # type: ignore
+from bokeh.layouts import column # type: ignore
 from bokeh.tile_providers import Vendors # type: ignore
 from pyproj import Transformer # type: ignore
 from collections import Counter
 import geopy.distance # type: ignore
-from IPython.display import clear_output # type: ignore
+from IPython.display import clear_output, display # type: ignore
 from thefuzz import fuzz
 
 # GTFS Modes
@@ -382,11 +383,11 @@ def manual_merge(G,
             back_map=False
 
             if back_map:
-                map_options = GMapOptions(lat=list(G.nodes(data=True))[0][1]["lat"], 
+                map_options = GMapOptions(lat=list(G.nodes(data=True))[0][1]["lat"],  # type: ignore
                                           lng=list(G.nodes(data=True))[0][1]["lon"], 
                                           map_type="roadmap", 
                                           zoom=11)
-                p = gmap(MAPS_API_KEY, map_options)
+                p = gmap(MAPS_API_KEY, map_options) # type: ignore
             else:
                 p = figure(height = 600 ,
                 width = 950, 
@@ -660,11 +661,11 @@ def edge_merger(G,
             back_map=False
 
             if back_map:
-                map_options = GMapOptions(lat=list(G.nodes(data=True))[0][1]["lat"], 
+                map_options = GMapOptions(lat=list(G.nodes(data=True))[0][1]["lat"], # type: ignore
                                           lng=list(G.nodes(data=True))[0][1]["lon"], 
                                           map_type="roadmap", 
                                           zoom=11)
-                p = gmap(MAPS_API_KEY, map_options)
+                p = gmap(MAPS_API_KEY, map_options) # type: ignore
             elif not x_range_start:
                 p = figure(height = 600 ,
                            width = 950,
@@ -788,6 +789,62 @@ def sanity_check(G):
     print("Number of edges: ", len(G.edges()))
     print("Number of nodes: ", len(G.nodes()))
     print("Number of strongly connected components: %d"%nx.number_strongly_connected_components(G))
+
+def process_route_data(L_graph, routes, node1, node2):
+    # Helper function to process a single direction
+    def process_single_direction(start_node, end_node):
+        edge_data = L_graph.get_edge_data(start_node, end_node)
+        if edge_data is None:  # Handle case where edge doesn’t exist
+            print(f"No edge data found for nodes ({start_node}, {end_node})")
+            return None
+        
+        route_I_counts = edge_data['route_I_counts']
+        route_ids = list(route_I_counts.keys())
+        
+        temp = routes.loc[routes['route_id'].isin(route_ids)].copy()
+        temp['n_vehicles'] = temp['route_id'].map(route_I_counts)
+        temp = temp.dropna(axis=1, how='all')
+        
+        # Print edge data for this direction
+        print(f"\nData for nodes ({start_node}, {end_node}):")
+        print('Average Duration:', edge_data['duration_avg'])
+        print('Number of Vehicles:', edge_data['n_vehicles'])
+        print('Headsign:', edge_data['headsign'])
+        
+        return temp
+
+    # Process both directions
+    temp_df1 = process_single_direction(node1, node2)
+    temp_df2 = process_single_direction(node2, node1)
+
+    # Print the DataFrames with labels
+    if temp_df1 is not None:
+        print(f"\nResult for nodes ({node1}, {node2}):")
+        display(temp_df1)
+    if temp_df2 is not None:
+        print(f"\nResult for nodes ({node2}, {node1}):")
+        display(temp_df2)
+
+    # Return both DataFrames
+    return temp_df1, temp_df2
+
+def node_degrees_table(graph):
+    data = []
+    
+    for node in graph.nodes:
+        node_name = graph.nodes[node].get('name', f"Node {node}")  # Extract name if it exists
+        in_degree = graph.in_degree(node)
+        out_degree = graph.out_degree(node)
+        total_degree = graph.degree(node)
+        
+        data.append([node, node_name, total_degree, in_degree, out_degree])
+    
+    df = pd.DataFrame(data, columns=['Node Number', 'Node Name', 'Total (In+Out)', 'Ingoing', 'Outgoing'])
+
+    # Sort by total degree in descending order
+    df = df.sort_values(by="Total (In+Out)", ascending=False)
+    
+    return df
 
 def extract_directed_subgraph(G, target_size, min_edges=3, seed=None):
     if seed is not None:
