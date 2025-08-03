@@ -961,7 +961,18 @@ def load_all_subgraphs(base_dir="../data/pkl", max_per_type=2):
 
     return subgraphs_by_size
 
+def load_removal_results_df(csv_path):
+    """
+    Load the node/edge removal simulation results from a CSV file.
 
+    Parameters:
+        csv_path (str): Path to the results CSV.
+
+    Returns:
+        pd.DataFrame: DataFrame containing removal results.
+    """
+    df = pd.read_csv(csv_path)
+    return df
 
 def efficiency_graph(L, sp):
     eg = 0
