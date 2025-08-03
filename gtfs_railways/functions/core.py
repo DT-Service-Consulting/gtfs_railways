@@ -961,6 +961,8 @@ def load_all_subgraphs(base_dir="../data/pkl", max_per_type=2):
 
     return subgraphs_by_size
 
+
+
 def efficiency_graph(L, sp):
     eg = 0
     count = 0
@@ -1553,6 +1555,40 @@ def betweenness_edge_removal(g, G, num_to_remove, sp_func, verbose=False):
 
     return original_efficiency, efficiencies, percent_remaining, removed_edges, removal_times
 
+
+def export_removal_results_to_csv(
+    output_path,
+    efficiencies,
+    percent_remaining,
+    removed_nodes,
+    removal_times
+):
+    """
+    Exports node removal simulation results to a CSV file.
+
+    Parameters:
+        output_path (str): Path to save the CSV.
+        efficiencies (list of float): Normalized efficiencies at each step.
+        percent_remaining (list of float): Remaining percent of nodes.
+        removed_nodes (list): Nodes whose edges were removed.
+        removal_times (list of float): Time taken per removal step.
+    """
+    steps = list(range(len(efficiencies)))
+    
+    # Pad removed_nodes and removal_times with None or 0 for step 0
+    removed_nodes_full = [None] + removed_nodes
+    removal_times_full = [0.0] + removal_times
+
+    df = pd.DataFrame({
+        "step": steps,
+        "removed_node": removed_nodes_full,
+        "normalized_efficiency": efficiencies,
+        "percent_remaining": percent_remaining,
+        "removal_time_seconds": removal_times_full
+    })
+
+    df.to_csv(output_path, index=False)
+    print(f"Results saved to {output_path}")
 
 def run_removal_simulations(
     subgraphs_by_size,
