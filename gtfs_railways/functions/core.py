@@ -1089,36 +1089,15 @@ def simulate_fixed_node_removal_efficiency(
 
 
 def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
-    """
-    Removes edges connected to nodes in a random order and tracks the impact on global efficiency.
-    The nodes themselves remain in the graph.
-
-    Parameters:
-        g: Base attributes or data required by efficiency_graph (not the networkx graph).
-        G (networkx.Graph): The input graph to modify (passed by reference).
-        num_to_remove (int): Number of nodes whose edges will be removed.
-        sp_func (callable): Function to compute shortest path structure given a graph.
-        seed (int, optional): Seed for reproducible random node selection.
-        verbose (bool): Whether to print detailed logs during execution.
-
-    Returns:
-        original_efficiency (float): The initial global efficiency before any removals.
-        efficiencies (list of float): Normalized global efficiencies after each removal.
-        num_removed (list of int): Step count corresponding to each edge-removal step.
-        removed_nodes (list of node): List of nodes whose edges were removed in the order of removal.
-        removal_times (list of float): Time taken (in seconds) for each removal step.
-        percent_remaining (list of float): Percentage of nodes remaining at each step.
-    """
     if seed is not None:
         random.seed(seed)
 
-    total_nodes = G.number_of_nodes()  # Save original node count for percentage calculation
+    total_nodes = G.number_of_nodes()
     removal_nodes = random.sample(list(G.nodes()), num_to_remove)
 
     if verbose:
         print(f"Random removal order: {removal_nodes}")
 
-    # Compute initial global efficiency on original graph
     sp = sp_func(G)
     original_efficiency = efficiency_graph(g, sp)
     if verbose:
@@ -1126,7 +1105,7 @@ def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
 
     efficiencies = [1.0]
     num_removed = [0]
-    percent_remaining = [100.0]  # Start at 100%
+    percent_remaining = [100.0]
     removed_nodes = []
     removal_times = []
 
@@ -1136,9 +1115,13 @@ def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
         if G.degree(node) == 0:
             if verbose:
                 print(f"Step {i + 1}: Node {node} already isolated, skipping.")
+            # Append previous efficiency and stats unchanged
             efficiencies.append(efficiencies[-1])
             num_removed.append(num_removed[-1])
             percent_remaining.append(100 * (1 - num_removed[-1] / total_nodes))
+            # Append placeholders for removed_nodes and removal_times
+            removed_nodes.append(None)
+            removal_times.append(0)
             continue
 
         edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
@@ -1166,6 +1149,7 @@ def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
             print(f"Time taken: {elapsed:.4f} seconds\n")
 
     return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
+
 
 
 def random_edge_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
