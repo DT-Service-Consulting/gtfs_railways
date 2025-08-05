@@ -1073,6 +1073,8 @@ def simulate_fixed_node_removal_efficiency(
             return targeted_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "betweenness":
             return betweenness_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
+        elif method == "top_hubs":
+            return top_hubs_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
         else:
             raise ValueError("Invalid method. Choose 'random', 'targeted', or 'betweenness'.")
     elif removal_type == "edge":
@@ -1549,6 +1551,76 @@ def betweenness_edge_removal(g, G, num_to_remove, sp_func, verbose=False):
             print(f"Time taken: {elapsed:.4f} seconds\n")
 
     return original_efficiency, efficiencies, percent_remaining, removed_edges, removal_times
+
+
+def top_hubs_node_removal(g, G, num_to_remove, sp_func, verbose=False):
+    """
+    Remove top hubs (by degree) sequentially and track efficiency degradation.
+
+    Returns:
+        original_efficiency, efficiencies (normalized),
+        percent_remaining, removed_nodes, removal_times, removed_node_names
+    """
+    # Sort nodes by degree descending
+    hubs_sorted = sorted(G.degree(), key=lambda x: x[1], reverse=True)
+    removal_nodes = [node for node, degree in hubs_sorted[:num_to_remove]]
+
+    if verbose:
+        print(f"Top hubs to remove: {removal_nodes}")
+
+    sp = sp_func(G)
+    original_efficiency = efficiency_graph(g, sp)
+    if verbose:
+        print(f"Original Efficiency: {original_efficiency}")
+
+    efficiencies = [1.0]
+    num_removed = [0]
+    percent_remaining = [100.0]
+    removed_nodes = []
+    removed_node_names = []
+    removal_times = []
+
+    total_nodes = G.number_of_nodes()
+
+    for i, node in enumerate(removal_nodes):
+        start_time = time.perf_counter()
+
+        if node not in G:
+            if verbose:
+                print(f"Node {node} already removed or missing, skipping.")
+            efficiencies.append(efficiencies[-1])
+            num_removed.append(num_removed[-1])
+            percent_remaining.append(100 * (1 - num_removed[-1] / total_nodes))
+            removed_nodes.append(None)
+            removed_node_names.append(None)
+            removal_times.append(0)
+            continue
+
+        G.remove_node(node)
+        removed_nodes.append(node)
+        removed_node_names.append(g.nodes[node].get('name', str(node)))  # save node name if exists else id
+
+        try:
+            sp = sp_func(G)
+            eff = efficiency_graph(g, sp)
+        except Exception as e:
+            if verbose:
+                print(f"Error after removing {node}: {e}")
+            break
+
+        elapsed = time.perf_counter() - start_time
+        normalized_eff = eff / original_efficiency
+
+        efficiencies.append(normalized_eff)
+        num_removed.append(num_removed[-1] + 1)
+        percent_remaining.append(100 * (1 - num_removed[-1] / total_nodes))
+        removal_times.append(round(elapsed, 4))
+
+        if verbose:
+            print(f"Removed node {node} ({removed_node_names[-1]}) → Normalized Efficiency: {normalized_eff:.4f}")
+            print(f"Time taken: {elapsed:.4f} seconds\n")
+
+    return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times, removed_node_names
 
 
 def export_removal_results_to_csv(
