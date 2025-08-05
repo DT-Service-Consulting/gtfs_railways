@@ -1628,7 +1628,8 @@ def export_removal_results_to_csv(
     efficiencies,
     percent_remaining,
     removed_nodes,
-    removal_times
+    removal_times,
+    removed_node_names=None
 ):
     """
     Exports node removal simulation results to a CSV file.
@@ -1639,6 +1640,7 @@ def export_removal_results_to_csv(
         percent_remaining (list of float): Remaining percent of nodes.
         removed_nodes (list): Nodes whose edges were removed.
         removal_times (list of float): Time taken per removal step.
+        removed_node_names (list, optional): Names of removed nodes, aligned with removed_nodes.
     """
     steps = list(range(len(efficiencies)))
     
@@ -1646,16 +1648,23 @@ def export_removal_results_to_csv(
     removed_nodes_full = [None] + removed_nodes
     removal_times_full = [0.0] + removal_times
 
-    df = pd.DataFrame({
+    data = {
         "step": steps,
         "removed_node": removed_nodes_full,
         "normalized_efficiency": efficiencies,
         "percent_remaining": percent_remaining,
         "removal_time_seconds": removal_times_full
-    })
+    }
+
+    if removed_node_names:
+        removed_node_names_full = [None] + removed_node_names
+        data["removed_node_name"] = removed_node_names_full
+
+    df = pd.DataFrame(data)
 
     df.to_csv(output_path, index=False)
     print(f"Results saved to {output_path}")
+
 
 def run_removal_simulations(
     subgraphs_by_size,
