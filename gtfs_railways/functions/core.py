@@ -1658,7 +1658,7 @@ def export_removal_results_to_csv(
 
     if removed_node_names:
         removed_node_names_full = [None] + removed_node_names
-        data["removed_node_name"] = removed_node_names_full
+        data["removed_node_names"] = removed_node_names_full
 
     df = pd.DataFrame(data)
 
