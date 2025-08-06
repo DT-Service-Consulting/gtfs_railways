@@ -12,18 +12,18 @@ from gtfs_railways.functions.v4 import P_space as P_space_4, get_all_GTC as get_
 
 simulate_fixed_node_removal_efficiency = compute_time(simulate_fixed_node_removal_efficiency)
 
-results_dir = DATA_DIR / "results/random_removal_runs_BE"
+results_dir = DATA_DIR / "results/removal_runs_random_node_NL"
 results_dir.mkdir(parents=True, exist_ok=True)
 
-attributes = load_gtfs(str(DATA_DIR / "sqlite/belgium.sqlite"))
-L_graph = load_graph(DATA_DIR / "pkl/belgium_routesCleaned.pkl")
-log_path = results_dir / "random_removal_BE.log"
-print("Working on BE data")
+# attributes = load_gtfs(str(DATA_DIR / "sqlite/belgium.sqlite"))
+# L_graph = load_graph(DATA_DIR / "pkl/belgium_routesCleaned.pkl")
+# log_path = results_dir / "random_removal_BE.log"
+# print("Working on BE data")
 
-# attributes = load_gtfs(str(DATA_DIR / "sqlite/NL.sqlite"))
-# L_graph = load_graph(DATA_DIR / "pkl/nl_merged.pkl")
-# log_path = results_dir / "random_removal_NL.log"
-# print("Working on NL data")
+attributes = load_gtfs(str(DATA_DIR / "sqlite/NL.sqlite"))
+L_graph = load_graph(DATA_DIR / "pkl/nl_merged.pkl")
+log_path = results_dir / "random_removal_NL.log"
+print("Working on NL data")
 
 sp_func = make_sp_func(attributes, get_all_GTC_4, P_space_4)
 
@@ -45,8 +45,9 @@ with open(log_path, "w") as log_file:
                 simulate_fixed_node_removal_efficiency(
                     L_graph=L_graph,
                     sp_func=sp_func,
-                    num_to_remove=5,
-                    # pct_to_remove=100,
+                    # num_to_remove=50,
+                    pct_to_remove=100,
+		    removal_type='node',
                     method='random',
                     seed=seed,
                     verbose=False
