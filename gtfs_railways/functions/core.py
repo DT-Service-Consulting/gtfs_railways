@@ -846,6 +846,26 @@ def node_degrees_table(graph):
     
     return df
 
+def stations_trains_df(graph):
+    data = []
+    
+    for node in graph.nodes:
+        node_name = graph.nodes[node].get('name', f"Node {node}")
+        
+        degree = graph.degree(node)
+        
+        # Sum n_vehicles for all edges connected to this node
+        num_trains = 0
+        for _, _, edata in graph.edges(node, data=True):
+            num_trains += edata.get('n_vehicles', 0)
+        
+        data.append([node, node_name, degree, num_trains])
+    
+    df = pd.DataFrame(data, columns=['Node Number', 'Node Name', 'Degree', 'Num Trains'])
+    df = df.sort_values(by="Num Trains", ascending=False).reset_index(drop=True)
+    
+    return df
+
 def extract_directed_subgraph(G, target_size, min_edges=3, seed=None):
     if seed is not None:
         random.seed(seed)
