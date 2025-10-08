@@ -1050,20 +1050,27 @@ def simulate_fixed_node_removal_efficiency(
     sp_func,
     num_to_remove=None,
     pct_to_remove=None,  # priority over num_to_remove
-    method='random',  # random or targeted or betweenness
+    method='random',  # random, targeted, betweenness, hubs, or custom
     removal_type='node',
+    custom_nodes=None,  # list of nodes to remove in order (only for method='custom')
     seed=None,
     verbose=False
 ):
     """
-    Simulates the impact of fixed sequential node removals on the global efficiency of a graph.
+    Simulates the impact of sequential removals (node or edge) on global efficiency.
 
     Parameters:
-        L_graph (networkx.Graph): The subgraph from which nodes will be removed.
-        num_to_remove (int, optional): Number of nodes to remove. Ignored if percentage is given.
-        pct_to_remove (int, optional): Percentage of nodes to remove (between 1 and 100).
-        seed (int, optional): Random seed for node selection.
-        verbose (bool): Whether to print progress and debug information.
+        L_graph (networkx.Graph): The subgraph from which nodes/edges will be removed.
+        num_to_remove (int, optional): Number of elements to remove. Ignored if percentage is given.
+        pct_to_remove (int, optional): Percentage of elements to remove (1-100).
+        method (str): Removal method. Options:
+            'random', 'targeted', 'betweenness',
+            'top_hubs_edges', 'top_hubs_trains',
+            'custom' (requires custom_nodes).
+        removal_type (str): 'node' or 'edge'.
+        custom_nodes (list, optional): List of nodes to remove in given order (used if method='custom').
+        seed (int, optional): Random seed.
+        verbose (bool): Print progress/debug info.
     """
     G = copy.deepcopy(L_graph)
 
@@ -1074,18 +1081,20 @@ def simulate_fixed_node_removal_efficiency(
     else:
         raise ValueError("Invalid removal_type. Choose 'node' or 'edge'.")
 
-    if pct_to_remove is not None:
-        if not (1 <= pct_to_remove <= 100):
-            raise ValueError("Percentage must be between 1 and 100.")
-        num_to_remove = int(total_elements * (pct_to_remove / 100))
-    elif num_to_remove is None:
-        raise ValueError("Specify num_to_remove or pct_to_remove.")
+    if method != "custom":  # normal modes
+        if pct_to_remove is not None:
+            if not (1 <= pct_to_remove <= 100):
+                raise ValueError("Percentage must be between 1 and 100.")
+            num_to_remove = int(total_elements * (pct_to_remove / 100))
+        elif num_to_remove is None:
+            raise ValueError("Specify num_to_remove or pct_to_remove.")
 
-    if num_to_remove > total_elements:
-        if verbose:
-            print(f"Adjusting number of elements to remove from {num_to_remove} to {total_elements - 2}.")
-        num_to_remove = max(total_elements - 2, 1)
+        if num_to_remove > total_elements:
+            if verbose:
+                print(f"Adjusting number of elements to remove from {num_to_remove} to {total_elements - 2}.")
+            num_to_remove = max(total_elements - 2, 1)
 
+    # Node removals
     if removal_type == "node":
         if method == "random":
             return random_node_removal(L_graph, G, num_to_remove, sp_func, seed, verbose)
@@ -1097,8 +1106,14 @@ def simulate_fixed_node_removal_efficiency(
             return top_hubs_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "top_hubs_trains":
             return top_train_hubs_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
+        elif method == "custom":
+            if not custom_nodes:
+                raise ValueError("Provide a list of custom_nodes when using method='custom'.")
+            return custom_node_removal(L_graph, G, custom_nodes, sp_func, verbose)
         else:
-            raise ValueError("Invalid method. Choose 'random', 'targeted', 'betweenness', 'top_hubs_edges' or 'top_hubs_trains'.")
+            raise ValueError("Invalid method.")
+    
+    # Edge removals
     elif removal_type == "edge":
         if method == "random":
             return random_edge_removal(L_graph, G, num_to_remove, sp_func, seed, verbose)
@@ -1107,9 +1122,42 @@ def simulate_fixed_node_removal_efficiency(
         elif method == "betweenness":
             return betweenness_edge_removal(L_graph, G, num_to_remove, sp_func, verbose)
         else:
-            raise ValueError("Invalid method. Use 'random', 'targeted', or 'betweenness' for edge removal.")
-    else:
-        raise ValueError("Invalid mode. Choose 'node' or 'edge'.")
+            raise ValueError("Invalid method for edge removal.")
+
+
+def custom_node_removal(L_graph, G, node_list, sp_func, verbose=False):
+    """
+    Remove nodes in a user-defined order and compute efficiency at each step.
+    """
+    removed_nodes = []
+    efficiencies = []
+    removal_times = []
+    num_removed = []
+
+    sp = sp_func(G)
+    original_efficiency = efficiency_graph(G, sp)
+    efficiencies.append(original_efficiency)
+    num_removed.append(0)
+    removal_times.append(0)
+
+    for i, node in enumerate(node_list, 1):
+        if node not in G:
+            if verbose:
+                print(f"Node {node} not in graph, skipping.")
+            continue
+        G.remove_node(node)
+        removed_nodes.append(node)
+
+        sp = sp_func(G)
+        eff = efficiency_graph(G, sp)
+        efficiencies.append(eff)
+        num_removed.append(i)
+        removal_times.append(i)  # placeholder for timing info
+
+        if verbose:
+            print(f"Removed {node}, efficiency = {eff:.4f}")
+
+    return original_efficiency, efficiencies, num_removed, removed_nodes, removal_times
 
 
 def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
@@ -2293,10 +2341,18 @@ def plot_graph_highlight_node(G, highlight_nodes=None, back_map="OSM"):
     p.add_tools(HoverTool(tooltips=tooltips))
 
     if back_map == "OSM":
-        p.add_tile(Vendors.CARTODBPOSITRON)  # Use this directly instead of get_provider
+        p.add_tile(Vendors.CARTODBPOSITRON)
 
     p.renderers.append(graph)
     show(p)
+
+    # Print highlighted node info below the plot
+    if highlight_nodes:
+        print("Highlighted Nodes:")
+        for node in highlight_nodes:
+            name = G.nodes[node].get("name", "Unknown")
+            print(f"  Node {node}: {name}")
+
 
 def plot_top_hubs(graph, top_n=10, seed=42):
     """

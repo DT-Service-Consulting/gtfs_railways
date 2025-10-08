@@ -2,6 +2,7 @@ from gtfs_railways.legacy.utils import mode_from_string, get_routes_for_mode
 
 import pandas as pd # type: ignore
 import networkx as nx # type: ignore
+import pprint
 
 
 def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
@@ -64,7 +65,9 @@ def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
                 t_stations.append(target)
                 tt = round(tt / 60)
 
+                # pprint.pprint(P_wait)
                 for t1, t2 in zip(t_stations, t_stations[1:]):
+                    # print(P_wait[(t1,t2)],t1,t2)
                     wait += P_wait[(t1, t2)]
 
                 wait = round(wait)
