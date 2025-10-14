@@ -1586,23 +1586,29 @@ def betweenness_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     Removes edges of nodes based on descending betweenness centrality,
     tracking the impact on global efficiency (normalized by initial value).
 
+    Works for both directed and undirected graphs.
+
     Parameters:
-        g (nx.DiGraph): Full original graph used for path logic, passed to sp_func.
-        G (nx.DiGraph): Working graph to be modified (edges removed).
-        num_to_remove (int): Number of nodes to process.
-        sp_func (function): Function to generate shortest-path structure from G.
-        verbose (bool): If True, prints per-step logs.
+        g (nx.Graph or nx.DiGraph): Original reference graph (for efficiency baseline).
+        G (nx.Graph or nx.DiGraph): Working copy of graph (modified in-place).
+        num_to_remove (int): Number of nodes (edge-removal steps) to perform.
+        sp_func (function): Function that recomputes shortest-path structure from G.
+        verbose (bool): Whether to print progress updates.
 
     Returns:
-        original_efficiency (float): Efficiency before any removal.
-        efficiencies (list): Normalized efficiencies at each step.
-        num_removed (list): Step counter.
-        removed_nodes (list): Node IDs removed (edge-deleted).
-        removal_times (list): Time taken per step (in seconds).
+        original_efficiency (float): Baseline efficiency before any removal.
+        efficiencies (list): Normalized efficiency after each step.
+        percent_remaining (list): Remaining node percentage after each step.
+        removed_nodes (list): Node removal order.
+        removal_times (list): Time taken per step.
     """
+    import time
+    import networkx as nx
+
     total_nodes = G.number_of_nodes()
     sp = sp_func(G)
     original_efficiency = efficiency_graph(G, sp)
+
     if verbose:
         print(f"Original Efficiency: {original_efficiency:.4f}")
 
@@ -1626,10 +1632,17 @@ def betweenness_node_removal(g, G, num_to_remove, sp_func, verbose=False):
                 print(f"Step {step} failed to compute centrality: {e}")
             break
 
-        centrality = {
-            node: score for node, score in centrality.items()
-            if (G.in_degree(node) > 0 or G.out_degree(node) > 0)
-        }
+        # Handle directed vs undirected graph differences
+        if isinstance(G, nx.DiGraph):
+            centrality = {
+                node: score for node, score in centrality.items()
+                if (G.in_degree(node) > 0 or G.out_degree(node) > 0)
+            }
+        else:
+            centrality = {
+                node: score for node, score in centrality.items()
+                if G.degree(node) > 0
+            }
 
         if not centrality:
             if verbose:
@@ -1637,9 +1650,14 @@ def betweenness_node_removal(g, G, num_to_remove, sp_func, verbose=False):
             break
 
         node_to_remove = max(centrality, key=centrality.get)
-        edges_to_remove = list(G.in_edges(node_to_remove)) + list(G.out_edges(node_to_remove))
-        G.remove_edges_from(edges_to_remove)
 
+        # Collect edges to remove depending on graph type
+        if isinstance(G, nx.DiGraph):
+            edges_to_remove = list(G.in_edges(node_to_remove)) + list(G.out_edges(node_to_remove))
+        else:
+            edges_to_remove = list(G.edges(node_to_remove))
+
+        G.remove_edges_from(edges_to_remove)
         removed_nodes.append(node_to_remove)
         removals_done += 1
 
