@@ -1602,8 +1602,6 @@ def betweenness_node_removal(g, G, num_to_remove, sp_func, verbose=False):
         removed_nodes (list): Node removal order.
         removal_times (list): Time taken per step.
     """
-    import time
-    import networkx as nx
 
     total_nodes = G.number_of_nodes()
     sp = sp_func(G)
