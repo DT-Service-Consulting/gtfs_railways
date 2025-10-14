@@ -1206,6 +1206,8 @@ def simulate_fixed_node_removal_efficiency(
             return random_node_removal(L_graph, G, num_to_remove, sp_func, seed, verbose)
         elif method == "targeted":
             return targeted_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
+        elif method == "targeted_least":
+            return targeted_node_removal_least(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "betweenness_weighted":
             return betweenness_node_removal_weighted(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "betweenness_unweighted":
@@ -1231,6 +1233,8 @@ def simulate_fixed_node_removal_efficiency(
             return random_edge_removal(L_graph, G, num_to_remove, sp_func, seed, verbose)
         elif method == "targeted":
             return targeted_edge_removal(L_graph, G, num_to_remove, sp_func, verbose)
+        elif method == "targeted_least":
+            return targeted_edge_removal_least(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "betweenness_weighted":
             return betweenness_edge_removal_weighted(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "betweenness_unweighted":
@@ -1520,6 +1524,83 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
 
     return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
 
+def targeted_node_removal_least(g, G, num_to_remove, sp_func, verbose=False):
+    """
+    Greedy node-edge removal: at each step, remove the node whose edge removals cause
+    the smallest drop in global efficiency (least impactful first).
+    """
+    total_nodes = G.number_of_nodes()
+    sp = sp_func(G)
+    original_efficiency = efficiency_graph(G, sp)
+    if verbose:
+        print(f"Original Efficiency: {original_efficiency:.4f}")
+
+    efficiencies = [1.0]
+    num_removed = [0]
+    percent_remaining = [100.0]
+    removed_nodes = []
+    removal_times = []
+
+    removals_done = 0
+    step = 0
+
+    while removals_done < num_to_remove:
+        step += 1
+        start_time = time.perf_counter()
+
+        sp = sp_func(G)
+        current_eff = efficiency_graph(G, sp)
+        min_drop = float("inf")
+        best_node = None
+
+        for node in G.nodes():
+            if G.degree(node) == 0:
+                continue
+
+            temp_G = G.copy()
+            temp_G.remove_edges_from(list(temp_G.edges(node)))
+
+            try:
+                sp_temp = sp_func(temp_G)
+                eff_temp = efficiency_graph(temp_G, sp_temp)
+            except Exception:
+                continue
+
+            drop = current_eff - eff_temp
+            if drop < min_drop:
+                min_drop = drop
+                best_node = node
+
+        if best_node is None:
+            if verbose:
+                print("No valid node to remove at step", step)
+            break
+
+        G.remove_edges_from(list(G.edges(best_node)))
+        removed_nodes.append(best_node)
+        removals_done += 1
+
+        try:
+            sp_new = sp_func(G)
+            eff = efficiency_graph(G, sp_new)
+        except Exception as e:
+            if verbose:
+                print(f"Error after removing {best_node}: {e}")
+            break
+
+        normalized_eff = eff / original_efficiency
+        elapsed = round(time.perf_counter() - start_time, 4)
+
+        efficiencies.append(normalized_eff)
+        num_removed.append(removals_done)
+        percent_remaining.append(100 * (1 - removals_done / total_nodes))
+        removal_times.append(elapsed)
+
+        if verbose:
+            print(f"Step {step}: Removed edges of {best_node} → Normalized Efficiency: {normalized_eff:.4f}")
+            print(f"Time taken: {elapsed:.4f} seconds\n")
+
+    return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
 
 def targeted_edge_removal(g, G, num_to_remove, sp_func, verbose=False):
     """
@@ -1595,6 +1676,78 @@ def targeted_edge_removal(g, G, num_to_remove, sp_func, verbose=False):
 
     return original_efficiency, efficiencies, percent_remaining, removed_edges, removal_times
 
+def targeted_edge_removal_least(g, G, num_to_remove, sp_func, verbose=False):
+    """
+    Greedy edge removal: at each step, remove the edge that causes
+    the smallest drop in global efficiency (least impactful first).
+    """
+    total_edges = G.number_of_edges()
+    sp = sp_func(G)
+    original_efficiency = efficiency_graph(G, sp)
+    if verbose:
+        print(f"Original Efficiency: {original_efficiency:.4f}")
+
+    efficiencies = [1.0]
+    num_removed = [0]
+    percent_remaining = [100.0]
+    removed_edges = []
+    removal_times = []
+
+    removals_done = 0
+    step = 0
+
+    while removals_done < num_to_remove and G.number_of_edges() > 0:
+        step += 1
+        start_time = time.perf_counter()
+
+        sp = sp_func(G)
+        current_eff = efficiency_graph(G, sp)
+        min_drop = float("inf")
+        best_edge = None
+
+        for edge in G.edges():
+            temp_G = G.copy()
+            temp_G.remove_edge(*edge)
+            try:
+                sp_temp = sp_func(temp_G)
+                eff_temp = efficiency_graph(temp_G, sp_temp)
+                drop = current_eff - eff_temp
+                if drop < min_drop:
+                    min_drop = drop
+                    best_edge = edge
+            except Exception:
+                continue
+
+        if best_edge is None:
+            if verbose:
+                print("No valid edge to remove at step", step)
+            break
+
+        G.remove_edge(*best_edge)
+        removed_edges.append(best_edge)
+        removals_done += 1
+
+        try:
+            sp_new = sp_func(G)
+            eff = efficiency_graph(G, sp_new)
+        except Exception as e:
+            if verbose:
+                print(f"Error after removing {best_edge}: {e}")
+            break
+
+        normalized_eff = eff / original_efficiency
+        elapsed = round(time.perf_counter() - start_time, 4)
+
+        efficiencies.append(normalized_eff)
+        num_removed.append(removals_done)
+        percent_remaining.append(100 * (1 - removals_done / total_edges))
+        removal_times.append(elapsed)
+
+        if verbose:
+            print(f"Step {step}: Removed edge {best_edge} → Normalized Efficiency: {normalized_eff:.4f}")
+            print(f"Time taken: {elapsed:.4f} seconds\n")
+
+    return original_efficiency, efficiencies, percent_remaining, removed_edges, removal_times
 
 def betweenness_node_removal_weighted(g, G, num_to_remove, sp_func, verbose=False):
     """
