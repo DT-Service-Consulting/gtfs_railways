@@ -1208,6 +1208,8 @@ def simulate_fixed_node_removal_efficiency(
             return targeted_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "betweenness":
             return betweenness_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
+        elif method == "betweenness_":
+            return betweenness_node_removal_(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "top_hubs_edges":
             return top_hubs_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "top_hubs_trains":
@@ -1227,6 +1229,8 @@ def simulate_fixed_node_removal_efficiency(
             return targeted_edge_removal(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "betweenness":
             return betweenness_edge_removal(L_graph, G, num_to_remove, sp_func, verbose)
+        elif method == "betweenness_":
+            return betweenness_edge_removal_(L_graph, G, num_to_remove, sp_func, verbose)
         else:
             raise ValueError("Invalid method for edge removal.")
 
@@ -1710,6 +1714,173 @@ def betweenness_edge_removal(g, G, num_to_remove, sp_func, verbose=False):
 
         try:
             centrality = nx.edge_betweenness_centrality(G, weight="duration_avg")
+        except Exception as e:
+            if verbose:
+                print(f"Step {step} failed to compute edge centrality: {e}")
+            break
+
+        if not centrality:
+            if verbose:
+                print("No edges left with nonzero centrality.")
+            break
+
+        edge_to_remove = max(centrality, key=centrality.get)
+        G.remove_edge(*edge_to_remove)
+        removed_edges.append(edge_to_remove)
+        removals_done += 1
+
+        try:
+            sp = sp_func(G)
+            eff = efficiency_graph(G, sp)
+        except Exception as e:
+            if verbose:
+                print(f"Error evaluating efficiency after removing {edge_to_remove}: {e}")
+            break
+
+        normalized_eff = eff / original_efficiency
+        elapsed = round(time.perf_counter() - start_time, 4)
+
+        efficiencies.append(normalized_eff)
+        num_removed.append(removals_done)
+        percent_remaining.append(100 * (1 - removals_done / total_edges))
+        removal_times.append(elapsed)
+
+        if verbose:
+            print(f"Step {step}: Removed edge {edge_to_remove} (Centrality: {centrality[edge_to_remove]:.4f})")
+            print(f"Normalized Efficiency: {normalized_eff:.4f}")
+            print(f"Time taken: {elapsed:.4f} seconds\n")
+
+    return original_efficiency, efficiencies, percent_remaining, removed_edges, removal_times
+
+def betweenness_node_removal_(g, G, num_to_remove, sp_func, verbose=False):
+    """
+    Removes edges of nodes based on descending betweenness centrality,
+    tracking the impact on global efficiency (normalized by initial value).
+
+    Works for both directed and undirected graphs.
+
+    Parameters:
+        g (nx.Graph or nx.DiGraph): Original reference graph (for efficiency baseline).
+        G (nx.Graph or nx.DiGraph): Working copy of graph (modified in-place).
+        num_to_remove (int): Number of nodes (edge-removal steps) to perform.
+        sp_func (function): Function that recomputes shortest-path structure from G.
+        verbose (bool): Whether to print progress updates.
+
+    Returns:
+        original_efficiency (float): Baseline efficiency before any removal.
+        efficiencies (list): Normalized efficiency after each step.
+        percent_remaining (list): Remaining node percentage after each step.
+        removed_nodes (list): Node removal order.
+        removal_times (list): Time taken per step.
+    """
+
+    total_nodes = G.number_of_nodes()
+    sp = sp_func(G)
+    original_efficiency = efficiency_graph(G, sp)
+
+    if verbose:
+        print(f"Original Efficiency: {original_efficiency:.4f}")
+
+    efficiencies = [1.0]
+    num_removed = [0]
+    percent_remaining = [100.0]
+    removed_nodes = []
+    removal_times = []
+
+    removals_done = 0
+    step = 0
+
+    while removals_done < num_to_remove:
+        step += 1
+        start_time = time.perf_counter()
+
+        try:
+            centrality = nx.betweenness_centrality(G)
+        except Exception as e:
+            if verbose:
+                print(f"Step {step} failed to compute centrality: {e}")
+            break
+
+        # Handle directed vs undirected graph differences
+        if isinstance(G, nx.DiGraph):
+            centrality = {
+                node: score for node, score in centrality.items()
+                if (G.in_degree(node) > 0 or G.out_degree(node) > 0)
+            }
+        else:
+            centrality = {
+                node: score for node, score in centrality.items()
+                if G.degree(node) > 0
+            }
+
+        if not centrality:
+            if verbose:
+                print("No non-isolated nodes left.")
+            break
+
+        node_to_remove = max(centrality, key=centrality.get)
+
+        # Collect edges to remove depending on graph type
+        if isinstance(G, nx.DiGraph):
+            edges_to_remove = list(G.in_edges(node_to_remove)) + list(G.out_edges(node_to_remove))
+        else:
+            edges_to_remove = list(G.edges(node_to_remove))
+
+        G.remove_edges_from(edges_to_remove)
+        removed_nodes.append(node_to_remove)
+        removals_done += 1
+
+        try:
+            sp = sp_func(G)
+            eff = efficiency_graph(G, sp)
+        except Exception as e:
+            if verbose:
+                print(f"Error evaluating efficiency after removing {node_to_remove}: {e}")
+            break
+
+        normalized_eff = eff / original_efficiency
+        elapsed = round(time.perf_counter() - start_time, 4)
+
+        efficiencies.append(normalized_eff)
+        num_removed.append(removals_done)
+        percent_remaining.append(100 * (1 - removals_done / total_nodes))
+        removal_times.append(elapsed)
+
+        if verbose:
+            print(f"Step {step}: Removed edges of {node_to_remove} (Centrality: {centrality[node_to_remove]:.4f})")
+            print(f"Normalized Efficiency: {normalized_eff:.4f}")
+            print(f"Time taken: {elapsed:.4f} seconds\n")
+
+    return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
+
+
+def betweenness_edge_removal_(g, G, num_to_remove, sp_func, verbose=False):
+    """
+    Removes edges based on descending edge betweenness centrality.
+
+    Returns same structure as betweenness_node_removal.
+    """
+    total_edges = G.number_of_edges()
+    sp = sp_func(G)
+    original_efficiency = efficiency_graph(G, sp)
+    if verbose:
+        print(f"Original Efficiency: {original_efficiency:.4f}")
+
+    efficiencies = [1.0]
+    num_removed = [0]
+    percent_remaining = [100.0]
+    removed_edges = []
+    removal_times = []
+
+    removals_done = 0
+    step = 0
+
+    while removals_done < num_to_remove and G.number_of_edges() > 0:
+        step += 1
+        start_time = time.perf_counter()
+
+        try:
+            centrality = nx.edge_betweenness_centrality(G)
         except Exception as e:
             if verbose:
                 print(f"Step {step} failed to compute edge centrality: {e}")
