@@ -866,6 +866,112 @@ def stations_trains_df(graph):
     
     return df
 
+def select_nodes_bokeh(G, jupyter_url="http://localhost:8888"):
+    """
+    Interactive Bokeh tool to manually select nodes from a network graph.
+    Returns the list of selected node IDs after clicking 'Confirm selection'.
+
+    Parameters:
+        G (networkx.Graph): The full graph.
+        jupyter_url (str): Jupyter notebook server URL (default: localhost:8888).
+    
+    Returns:
+        list: List of selected node IDs.
+    """
+    selected_nodes = []
+
+    def bkapp(doc):    
+        # Prepare node positions
+        pos_dict = {int(i): (float(d["lon"]), float(d["lat"])) for i, d in G.nodes(data=True)}
+
+        # Create network graph renderer
+        graph = from_networkx(G, layout_function=pos_dict)
+        p = figure(
+            height=600,
+            width=950,
+            toolbar_location='below',
+            tools="pan,tap,box_select,wheel_zoom,reset,save",
+            title="Select nodes (Tap or Box Select). Click 'Confirm selection' when done."
+        )
+
+        # Activate zoom by default
+        p.toolbar.active_scroll = p.select_one(WheelZoomTool)
+
+        # Node hover info
+        hover = HoverTool(tooltips=[("ID", "@index"), ("Name", "@name")], renderers=[graph.node_renderer])
+        p.add_tools(hover)
+
+        # Node appearance
+        graph.node_renderer.glyph = Circle(size=8, fill_color="lightblue")
+        graph.node_renderer.selection_glyph = Circle(size=10, fill_color="red")
+        graph.node_renderer.nonselection_glyph = Circle(size=6, fill_color="lightgray", fill_alpha=0.5)
+        p.renderers.append(graph)
+
+        # Confirm selection button
+        confirm_button = Button(label="Confirm selection", button_type="success")
+
+        def confirm_selection():
+            indices = graph.node_renderer.data_source.selected.indices
+            selected = [graph.node_renderer.data_source.data["index"][i] for i in indices]
+            selected_nodes.clear()
+            selected_nodes.extend(selected)
+            print(f"Selected nodes: {selected_nodes}")
+            p.title.text = f"Selection confirmed: {len(selected_nodes)} nodes"
+
+        confirm_button.on_click(confirm_selection)
+
+        layout = column(p, confirm_button)
+        doc.add_root(layout)
+
+    show(bkapp, notebook_url=jupyter_url)
+    return selected_nodes
+
+def make_subgraph_from_nodes(G, node_list, copy=True):
+    """
+    Create a subgraph from a given list of nodes.
+
+    Parameters:
+        G (networkx.Graph): The full input graph.
+        node_list (list): List of node IDs to include in the subgraph.
+        copy (bool): Whether to return a deep copy of the subgraph (default: True).
+
+    Returns:
+        networkx.Graph: The resulting subgraph.
+    """
+    # Filter only nodes that exist in G
+    valid_nodes = [n for n in node_list if n in G.nodes]
+    missing_nodes = set(node_list) - set(valid_nodes)
+    
+    if missing_nodes:
+        print(f"Warning: {len(missing_nodes)} nodes not found in graph and were skipped: {missing_nodes}")
+
+    # Create subgraph
+    subG = G.subgraph(valid_nodes)
+    if copy:
+        subG = nx.Graph(subG)  # returns a copy, not a view
+
+    # Log some info
+    print(f"Created subgraph with {subG.number_of_nodes()} nodes and {subG.number_of_edges()} edges.")
+    return subG
+
+def save_subgraph_as_pickle(subgraph, file_path):
+    """
+    Save a NetworkX subgraph as a .pkl file (compatible across NetworkX versions).
+
+    Parameters:
+        subgraph (networkx.Graph): The subgraph to save.
+        file_path (str): Full path where the .pkl file should be saved.
+                         Example: 'data/subgraphs/ring_structure.pkl'
+    """
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(str(file_path)), exist_ok=True)
+
+    # Always save as pickle directly
+    with open(file_path, "wb") as f:
+        pickle.dump(subgraph, f)
+
+    print(f"Subgraph saved successfully at: {file_path}")
+
 def extract_directed_subgraph(G, target_size, min_edges=3, seed=None):
     if seed is not None:
         random.seed(seed)
@@ -1196,7 +1302,11 @@ def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
             removal_times.append(0)
             continue
 
-        edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
+         # Handle directed and undirected graphs correctly
+        if isinstance(G, nx.DiGraph):
+            edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
+        else:
+            edges_to_remove = list(G.edges(node))
         G.remove_edges_from(edges_to_remove)
         removed_nodes.append(node)
 
@@ -1351,7 +1461,7 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
                 continue
 
             temp_G = G.copy()
-            temp_G.remove_edges_from(list(temp_G.in_edges(node)) + list(temp_G.out_edges(node)))
+            temp_G.remove_edges_from(list(temp_G.edges(node)))
 
             try:
                 sp_temp = sp_func(temp_G)
@@ -1369,7 +1479,7 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
                 print("No valid node to remove at step", step)
             break
 
-        G.remove_edges_from(list(G.in_edges(best_node)) + list(G.out_edges(best_node)))
+        G.remove_edges_from(list(G.edges(best_node)))
         removed_nodes.append(best_node)
         removals_done += 1
 
