@@ -5,14 +5,14 @@ import networkx as nx # type: ignore
 import pprint
 
 
-def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
+def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen, debug=False):
     # Precompute all attributes
     P_veh = nx.get_edge_attributes(P_space, "veh")
     P_wait = nx.get_edge_attributes(P_space, "avg_wait")
     L_dur = nx.get_edge_attributes(L_space, "duration_avg")
     L_dist = nx.get_edge_attributes(L_space, "d")
 
-    # Precompute route directions as sets to avoid redundant set conversions
+    # Precompute route directions as sets to avoid redundant conversions
     routes_dirs = {}
     for e in P_veh:
         routes_dirs[e] = set()
@@ -20,7 +20,7 @@ def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
             for dr in P_veh[e][ro]:
                 routes_dirs[e].add(str(ro) + str(dr))
 
-    # Compute all shortest paths using Dijkstra's algorithm
+    # Compute all shortest paths using Dijkstra
     paths = dict(nx.all_pairs_dijkstra_path(L_space, weight="duration_avg"))
     shortest_paths = {}
 
@@ -35,7 +35,7 @@ def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
             tt_paths = []
             only_tts = []
 
-            # We consider just one path
+            # Only one path per OD pair
             if target in paths[n1]:
                 k_paths = [paths[n1][target]]
             else:
@@ -43,7 +43,6 @@ def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
 
             for p in k_paths:
                 possible_routes = routes_dirs.get((p[0], p[1]), set()).copy()
-
                 dist = 0
                 tt = 0
                 wait = 0
@@ -51,12 +50,20 @@ def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
                 t_stations = [n1]
 
                 for l1, l2 in zip(p, p[1:]):
-                    tt += L_dur[(l1, l2)]
-                    dist += L_dist[(l1, l2)]
+                    # Handle missing or reversed edges safely
+                    if (l1, l2) in L_dur:
+                        tt += L_dur[(l1, l2)]
+                        dist += L_dist.get((l1, l2), 0)
+                    elif (l2, l1) in L_dur:
+                        tt += L_dur[(l2, l1)]
+                        dist += L_dist.get((l2, l1), 0)
+                    else:
+                        if debug:
+                            print(f"Skipped missing L edge: ({l1}, {l2})")
+                        continue
 
-                    routes = routes_dirs.get((l1, l2), set())
+                    routes = routes_dirs.get((l1, l2), routes_dirs.get((l2, l1), set()))
                     possible_routes.intersection_update(routes)
-
                     if not possible_routes:
                         possible_routes = routes.copy()
                         tf += 1
@@ -65,10 +72,16 @@ def get_all_GTC(L_space, P_space, k, wait_pen, transfer_pen):
                 t_stations.append(target)
                 tt = round(tt / 60)
 
-                # pprint.pprint(P_wait)
+                # Compute waiting time safely
                 for t1, t2 in zip(t_stations, t_stations[1:]):
-                    # print(P_wait[(t1,t2)],t1,t2)
-                    wait += P_wait[(t1, t2)]
+                    if (t1, t2) in P_wait:
+                        wait += P_wait[(t1, t2)]
+                    elif (t2, t1) in P_wait:
+                        wait += P_wait[(t2, t1)]
+                    else:
+                        if debug:
+                            print(f"Missing wait time for ({t1}, {t2}) — assuming 0")
+                        wait += 0
 
                 wait = round(wait)
                 transfer_cost = sum([transfer_pen[i] if i < len(transfer_pen) else transfer_pen[-1] for i in range(tf)])
