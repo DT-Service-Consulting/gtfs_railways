@@ -1204,6 +1204,8 @@ def simulate_fixed_node_removal_efficiency(
     if removal_type == "node":
         if method == "random":
             return random_node_removal(L_graph, G, num_to_remove, sp_func, seed, verbose)
+        elif method == "random_average":
+            return random_node_removal_average(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "targeted":
             return targeted_node_removal(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "targeted_least":
@@ -1231,6 +1233,8 @@ def simulate_fixed_node_removal_efficiency(
     elif removal_type == "edge":
         if method == "random":
             return random_edge_removal(L_graph, G, num_to_remove, sp_func, seed, verbose)
+        elif method == "random_average":
+            return random_edge_removal_average(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "targeted":
             return targeted_edge_removal(L_graph, G, num_to_remove, sp_func, verbose)
         elif method == "targeted_least":
@@ -1351,6 +1355,38 @@ def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
 
     return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
 
+def random_node_removal_average(L_graph, G, num_to_remove, sp_func, verbose=False, n_runs=10):
+    """
+    Runs random node removal multiple times and returns mean, min, max efficiency evolution.
+    Ensures all runs are aligned to the same number of removals.
+    """
+    all_eff = []
+    total_nodes = L_graph.number_of_nodes()
+    target_len = num_to_remove + 1
+
+    for i in range(n_runs):
+        seed = random.randint(0, 2**31 - 1)
+        _, eff, _, _, _ = random_node_removal(L_graph, copy.deepcopy(G), num_to_remove, sp_func, seed=seed, verbose=verbose)
+        eff = np.array(eff, dtype=float)
+        # Pad to target length with last value
+        if len(eff) < target_len:
+            eff = np.pad(eff, (0, target_len - len(eff)), mode='edge')
+        elif len(eff) > target_len:
+            eff = eff[:target_len]
+        all_eff.append(eff)
+
+    all_eff = np.vstack(all_eff)
+    mean_eff = np.mean(all_eff, axis=0)
+    min_eff = np.min(all_eff, axis=0)
+    max_eff = np.max(all_eff, axis=0)
+
+    percent_remaining = 100 * (1 - np.arange(target_len) / total_nodes)
+
+    # Original efficiency (first value)
+    sp = sp_func(G)
+    original_eff = efficiency_graph(G, sp)
+
+    return original_eff, mean_eff, min_eff, max_eff, percent_remaining
 
 
 def random_edge_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
@@ -1431,6 +1467,38 @@ def random_edge_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
 
     return original_efficiency, efficiencies, percent_remaining, removed_edges, removal_times
 
+def random_edge_removal_average(L_graph, G, num_to_remove, sp_func, verbose=False, n_runs=10):
+    """
+    Runs random edge removal multiple times and returns mean, min, max efficiency evolution.
+    Ensures all runs are aligned to the same number of removals.
+    """
+    all_eff = []
+    total_edges = G.number_of_edges()
+    target_len = num_to_remove + 1
+
+    for i in range(n_runs):
+        seed = np.random.randint(0, 1e9)
+        _, eff, _, _, _ = random_edge_removal(L_graph, copy.deepcopy(G), num_to_remove, sp_func, seed, verbose)
+        eff = np.array(eff, dtype=float)
+        # Pad to target length with last value
+        if len(eff) < target_len:
+            eff = np.pad(eff, (0, target_len - len(eff)), mode='edge')
+        elif len(eff) > target_len:
+            eff = eff[:target_len]
+        all_eff.append(eff)
+
+    all_eff = np.vstack(all_eff)
+    mean_eff = np.mean(all_eff, axis=0)
+    min_eff = np.min(all_eff, axis=0)
+    max_eff = np.max(all_eff, axis=0)
+
+    percent_remaining = 100 * (1 - np.arange(target_len) / total_edges)
+
+    # Original efficiency (first value)
+    sp = sp_func(G)
+    original_eff = efficiency_graph(G, sp)
+
+    return original_eff, mean_eff, min_eff, max_eff, percent_remaining
 
 def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     """
