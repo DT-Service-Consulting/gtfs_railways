@@ -1357,8 +1357,8 @@ def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
 
 def random_node_removal_average(L_graph, G, num_to_remove, sp_func, verbose=False, n_runs=10):
     """
-    Runs random node removal multiple times and returns mean, min, max efficiency evolution.
-    Ensures all runs are aligned to the same number of removals.
+    Runs random node removal multiple times and returns mean and standard deviation
+    of efficiency evolution across runs.
     """
     all_eff = []
     total_nodes = L_graph.number_of_nodes()
@@ -1377,8 +1377,7 @@ def random_node_removal_average(L_graph, G, num_to_remove, sp_func, verbose=Fals
 
     all_eff = np.vstack(all_eff)
     mean_eff = np.mean(all_eff, axis=0)
-    min_eff = np.min(all_eff, axis=0)
-    max_eff = np.max(all_eff, axis=0)
+    std_eff = np.std(all_eff, axis=0)
 
     percent_remaining = 100 * (1 - np.arange(target_len) / total_nodes)
 
@@ -1386,7 +1385,8 @@ def random_node_removal_average(L_graph, G, num_to_remove, sp_func, verbose=Fals
     sp = sp_func(G)
     original_eff = efficiency_graph(G, sp)
 
-    return original_eff, mean_eff, min_eff, max_eff, percent_remaining
+    return original_eff, mean_eff, std_eff, percent_remaining
+
 
 
 def random_edge_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
@@ -1469,7 +1469,8 @@ def random_edge_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
 
 def random_edge_removal_average(L_graph, G, num_to_remove, sp_func, verbose=False, n_runs=10):
     """
-    Runs random edge removal multiple times and returns mean, min, max efficiency evolution.
+    Runs random edge removal multiple times and returns mean and standard deviation
+    of efficiency evolution across runs.
     Ensures all runs are aligned to the same number of removals.
     """
     all_eff = []
@@ -1489,8 +1490,7 @@ def random_edge_removal_average(L_graph, G, num_to_remove, sp_func, verbose=Fals
 
     all_eff = np.vstack(all_eff)
     mean_eff = np.mean(all_eff, axis=0)
-    min_eff = np.min(all_eff, axis=0)
-    max_eff = np.max(all_eff, axis=0)
+    std_eff = np.std(all_eff, axis=0)
 
     percent_remaining = 100 * (1 - np.arange(target_len) / total_edges)
 
@@ -1498,7 +1498,7 @@ def random_edge_removal_average(L_graph, G, num_to_remove, sp_func, verbose=Fals
     sp = sp_func(G)
     original_eff = efficiency_graph(G, sp)
 
-    return original_eff, mean_eff, min_eff, max_eff, percent_remaining
+    return original_eff, mean_eff, std_eff, percent_remaining
 
 def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     """
