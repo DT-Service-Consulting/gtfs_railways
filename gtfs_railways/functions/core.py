@@ -1313,19 +1313,19 @@ def random_node_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
     for i, node in enumerate(removal_nodes):
         start_time = time.perf_counter()
 
+        # Case 1: node already isolated — reuse last efficiency, still advance counters
         if G.degree(node) == 0:
             if verbose:
-                print(f"Step {i + 1}: Node {node} already isolated, skipping.")
-            # Append previous efficiency and stats unchanged
+                print(f"Step {i + 1}: Node {node} already isolated — no edges removed, same efficiency recorded.")
+
             efficiencies.append(efficiencies[-1])
-            num_removed.append(num_removed[-1])
+            num_removed.append(num_removed[-1] + 1)  # increment to keep visualization aligned
             percent_remaining.append(100 * (1 - num_removed[-1] / total_nodes))
-            # Append placeholders for removed_nodes and removal_times
-            removed_nodes.append(None)
+            removed_nodes.append(node)
             removal_times.append(0)
             continue
 
-         # Handle directed and undirected graphs correctly
+        # Case 2: node still connected — remove its edges
         if isinstance(G, nx.DiGraph):
             edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
         else:
@@ -1386,8 +1386,6 @@ def random_node_removal_average(L_graph, G, num_to_remove, sp_func, verbose=Fals
     original_eff = efficiency_graph(G, sp)
 
     return original_eff, mean_eff, std_eff, percent_remaining
-
-
 
 def random_edge_removal(g, G, num_to_remove, sp_func, seed=None, verbose=False):
     """
