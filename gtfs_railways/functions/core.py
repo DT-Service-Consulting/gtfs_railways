@@ -1501,23 +1501,9 @@ def random_edge_removal_average(L_graph, G, num_to_remove, sp_func, verbose=Fals
 def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     """
     Greedy edge removal: at each step, remove the edges of the node that causes the largest drop in global efficiency.
-
-    Parameters:
-        g (nx.DiGraph): Attributes graph (used inside sp_func).
-        G (nx.DiGraph): The mutable working graph (will be changed in-place).
-        num_to_remove (int): Number of node edge-removals to perform.
-        sp_func (function): Function that recomputes the shortest-path structure from G.
-        verbose (bool): Whether to print logs.
-
-    Returns:
-        original_efficiency (float): Efficiency before any removal.
-        efficiencies (list): Normalized efficiencies.
-        num_removed (list): Removal steps.
-        removed_nodes (list): Nodes removed in order.
-        removal_times (list): Step-wise durations.
+    If all remaining nodes are isolated, the function still advances the step count using the previous efficiency.
     """
-    # Compute initial SP and efficiency
-    total_nodes = G.number_of_nodes()  # for percent remaining calculation
+    total_nodes = G.number_of_nodes()
     sp = sp_func(G)
     original_efficiency = efficiency_graph(G, sp)
     if verbose:
@@ -1536,6 +1522,7 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
         step += 1
         start_time = time.perf_counter()
 
+        # Recompute efficiency before choosing node
         sp = sp_func(G)
         current_eff = efficiency_graph(G, sp)
         max_drop = -1
@@ -1543,7 +1530,7 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
 
         for node in G.nodes():
             if G.degree(node) == 0:
-                continue
+                continue  # isolated nodes can't cause efficiency drop
 
             temp_G = G.copy()
             temp_G.remove_edges_from(list(temp_G.edges(node)))
@@ -1551,7 +1538,7 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
             try:
                 sp_temp = sp_func(temp_G)
                 eff_temp = efficiency_graph(temp_G, sp_temp)
-            except:
+            except Exception:
                 continue
 
             drop = current_eff - eff_temp
@@ -1559,11 +1546,19 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
                 max_drop = drop
                 best_node = node
 
+        # Handle case where all remaining nodes are isolated
         if best_node is None:
             if verbose:
-                print("No valid node to remove at step", step)
-            break
+                print(f"Step {step}: All remaining nodes are isolated — no edges removed, same efficiency recorded.")
+            efficiencies.append(efficiencies[-1])
+            num_removed.append(num_removed[-1] + 1)
+            percent_remaining.append(100 * (1 - num_removed[-1] / total_nodes))
+            removed_nodes.append(None)
+            removal_times.append(0)
+            removals_done += 1
+            continue
 
+        # Perform removal
         G.remove_edges_from(list(G.edges(best_node)))
         removed_nodes.append(best_node)
         removals_done += 1
@@ -1573,7 +1568,7 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
             eff = efficiency_graph(G, sp_new)
         except Exception as e:
             if verbose:
-                print(f"Error after removing {best_node}: {e}")
+                print(f"Error after removing edges of {best_node}: {e}")
             break
 
         normalized_eff = eff / original_efficiency
@@ -1594,6 +1589,8 @@ def targeted_node_removal_least(g, G, num_to_remove, sp_func, verbose=False):
     """
     Greedy node-edge removal: at each step, remove the node whose edge removals cause
     the smallest drop in global efficiency (least impactful first).
+    If all remaining nodes are isolated, reuse the previous efficiency so that
+    visualizations remain continuous.
     """
     total_nodes = G.number_of_nodes()
     sp = sp_func(G)
@@ -1637,11 +1634,20 @@ def targeted_node_removal_least(g, G, num_to_remove, sp_func, verbose=False):
                 min_drop = drop
                 best_node = node
 
+        # Handle case where all remaining nodes are isolated
         if best_node is None:
             if verbose:
-                print("No valid node to remove at step", step)
-            break
+                print(f"Step {step}: All remaining nodes are isolated — no edges removed, same efficiency recorded.")
 
+            efficiencies.append(efficiencies[-1])
+            num_removed.append(num_removed[-1] + 1)
+            percent_remaining.append(100 * (1 - num_removed[-1] / total_nodes))
+            removed_nodes.append(None)
+            removal_times.append(0)
+            removals_done += 1
+            continue
+
+        # Perform edge removal
         G.remove_edges_from(list(G.edges(best_node)))
         removed_nodes.append(best_node)
         removals_done += 1
@@ -1651,7 +1657,7 @@ def targeted_node_removal_least(g, G, num_to_remove, sp_func, verbose=False):
             eff = efficiency_graph(G, sp_new)
         except Exception as e:
             if verbose:
-                print(f"Error after removing {best_node}: {e}")
+                print(f"Error after removing edges of {best_node}: {e}")
             break
 
         normalized_eff = eff / original_efficiency
