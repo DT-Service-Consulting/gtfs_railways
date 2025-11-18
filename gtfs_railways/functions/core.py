@@ -1812,6 +1812,7 @@ def targeted_edge_removal_least(g, G, num_to_remove, sp_func, verbose=False):
 
     return original_efficiency, efficiencies, percent_remaining, removed_edges, removal_times
 
+
 def betweenness_node_removal_weighted(g, G, num_to_remove, sp_func, verbose=False):
     """
     Removes edges of nodes based on descending betweenness centrality,
@@ -1861,22 +1862,24 @@ def betweenness_node_removal_weighted(g, G, num_to_remove, sp_func, verbose=Fals
                 print(f"Step {step} failed to compute centrality: {e}")
             break
 
-        # Handle directed vs undirected graph differences
-        if isinstance(G, nx.DiGraph):
-            centrality = {
-                node: score for node, score in centrality.items()
-                if (G.in_degree(node) > 0 or G.out_degree(node) > 0)
-            }
-        else:
-            centrality = {
-                node: score for node, score in centrality.items()
-                if G.degree(node) > 0
-            }
+        # Updated: Do NOT stop if no non-isolated nodes remain.
+        # Instead, filter out isolated nodes and continue.
+        centrality = {
+            node: score for node, score in centrality.items()
+            if (
+                (isinstance(G, nx.DiGraph) and (G.in_degree(node) > 0 or G.out_degree(node) > 0))
+                or
+                (not isinstance(G, nx.DiGraph) and G.degree(node) > 0)
+            )
+        }
 
         if not centrality:
-            if verbose:
-                print("No non-isolated nodes left.")
-            break
+            # No edges remain anywhere. The graph is fully isolated, but we continue
+            # by selecting ANY node (max centrality from original dict).
+            # This matches the least-version behavior: continue past isolation.
+            centrality = {
+                node: score for node, score in nx.betweenness_centrality(G, weight="duration_avg").items()
+            }
 
         node_to_remove = max(centrality, key=centrality.get)
 
@@ -1963,26 +1966,27 @@ def betweenness_node_removal_unweighted(g, G, num_to_remove, sp_func, verbose=Fa
                 print(f"Step {step} failed to compute centrality: {e}")
             break
 
-        # Handle directed vs undirected graph differences
-        if isinstance(G, nx.DiGraph):
-            centrality = {
-                node: score for node, score in centrality.items()
-                if (G.in_degree(node) > 0 or G.out_degree(node) > 0)
-            }
+        # Updated isolated-node handling to match least-logic
+        centrality_valid = {
+            node: score for node, score in centrality.items()
+            if (
+                (isinstance(G, nx.DiGraph) and (G.in_degree(node) > 0 or G.out_degree(node) > 0))
+                or
+                (not isinstance(G, nx.DiGraph) and G.degree(node) > 0)
+            )
+        }
+
+        if centrality_valid:
+            centrality_use = centrality_valid
         else:
-            centrality = {
-                node: score for node, score in centrality.items()
-                if G.degree(node) > 0
-            }
+            # No nodes with edges remain, fall back to full dictionary
+            centrality_use = centrality
 
-        if not centrality:
             if verbose:
-                print("No non-isolated nodes left.")
-            break
+                print("All nodes isolated. Continuing removal using full centrality set.")
 
-        node_to_remove = max(centrality, key=centrality.get)
+        node_to_remove = max(centrality_use, key=centrality_use.get)
 
-        # Collect edges to remove depending on graph type
         if isinstance(G, nx.DiGraph):
             edges_to_remove = list(G.in_edges(node_to_remove)) + list(G.out_edges(node_to_remove))
         else:
@@ -2009,11 +2013,12 @@ def betweenness_node_removal_unweighted(g, G, num_to_remove, sp_func, verbose=Fa
         removal_times.append(elapsed)
 
         if verbose:
-            print(f"Step {step}: Removed edges of {node_to_remove} (Centrality: {centrality[node_to_remove]:.4f})")
+            print(f"Step {step}: Removed edges of {node_to_remove} (Centrality: {centrality_use[node_to_remove]:.4f})")
             print(f"Normalized Efficiency: {normalized_eff:.4f}")
             print(f"Time taken: {elapsed:.4f} seconds\n")
 
     return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
+
 
 def betweenness_node_removal_weighted_least(g, G, num_to_remove, sp_func, verbose=False):
     """
