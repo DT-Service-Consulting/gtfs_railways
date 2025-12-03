@@ -1245,7 +1245,7 @@ def simulate_fixed_node_removal_efficiency(
     return None
 
 
-def custom_edge_removal(L_graph, G, node_list, sp_func, verbose=False):
+def custom_node_removal(L_graph, G, node_list, sp_func, verbose=False):
     """
     Remove edges of nodes in a user-defined order and compute efficiency at each step.
     """
@@ -2178,7 +2178,7 @@ def betweenness_node_removal_unweighted_least(g, G, num_to_remove, sp_func, verb
     return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
 
 
-def top_hubs_edge_removal(g, G, num_to_remove, sp_func, verbose=False):
+def top_hubs_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     """
     Remove edges of top hubs (by degree) sequentially and track efficiency degradation.
 
@@ -2253,7 +2253,7 @@ def top_hubs_edge_removal(g, G, num_to_remove, sp_func, verbose=False):
 
 
 
-def top_train_hubs_edge_removal(g, G, num_to_remove, sp_func, verbose=False):
+def top_train_hubs_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     """
     Remove edges of top train hubs (by number of trains) sequentially and track efficiency degradation.
     """
