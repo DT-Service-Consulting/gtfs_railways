@@ -1247,7 +1247,7 @@ def simulate_fixed_node_removal_efficiency(
 
 def custom_node_removal(L_graph, G, node_list, sp_func, verbose=False):
     """
-    Remove edges of nodes in a user-defined order and compute efficiency at each step.
+    Remove all incoming and outgoing edges of nodes in a user-defined order and compute efficiency at each step.
     """
     import time
 
@@ -1270,8 +1270,11 @@ def custom_node_removal(L_graph, G, node_list, sp_func, verbose=False):
 
         start_time = time.perf_counter()
         
-        # Remove all edges of the node instead of the node itself
-        edges_to_remove = list(G.edges(node))
+        # Remove all edges of the node (both incoming and outgoing if directed)
+        if G.is_directed():
+            edges_to_remove = list(G.out_edges(node)) + list(G.in_edges(node))
+        else:
+            edges_to_remove = list(G.edges(node))
         G.remove_edges_from(edges_to_remove)
         removed_nodes.append(node)
 
@@ -1501,9 +1504,22 @@ def random_edge_removal_average(L_graph, G, num_to_remove, sp_func, verbose=Fals
 
 def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     """
-    Greedy edge removal: at each step, remove the edges of the node that causes the largest drop in global efficiency.
+    Greedy edge removal: at each step, remove all edges (incoming and outgoing) of the node
+    that causes the largest drop in global efficiency.
     If all remaining nodes are isolated, the function still advances the step count using the previous efficiency.
+    
+    Args:
+        g: unused, can be ignored or removed.
+        G (nx.Graph or nx.DiGraph): graph to operate on.
+        num_to_remove (int): number of nodes to remove edges from.
+        sp_func (callable): function to compute shortest paths on G.
+        verbose (bool): print progress.
+        
+    Returns:
+        original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
     """
+    import time
+
     total_nodes = G.number_of_nodes()
     sp = sp_func(G)
     original_efficiency = efficiency_graph(G, sp)
@@ -1534,7 +1550,11 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
                 continue  # isolated nodes can't cause efficiency drop
 
             temp_G = G.copy()
-            temp_G.remove_edges_from(list(temp_G.edges(node)))
+            if G.is_directed():
+                temp_edges_to_remove = list(temp_G.out_edges(node)) + list(temp_G.in_edges(node))
+            else:
+                temp_edges_to_remove = list(temp_G.edges(node))
+            temp_G.remove_edges_from(temp_edges_to_remove)
 
             try:
                 sp_temp = sp_func(temp_G)
@@ -1559,8 +1579,12 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
             removals_done += 1
             continue
 
-        # Perform removal
-        G.remove_edges_from(list(G.edges(best_node)))
+        # Perform removal of all edges (incoming + outgoing)
+        if G.is_directed():
+            edges_to_remove = list(G.out_edges(best_node)) + list(G.in_edges(best_node))
+        else:
+            edges_to_remove = list(G.edges(best_node))
+        G.remove_edges_from(edges_to_remove)
         removed_nodes.append(best_node)
         removals_done += 1
 
@@ -1586,13 +1610,17 @@ def targeted_node_removal(g, G, num_to_remove, sp_func, verbose=False):
 
     return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
 
+
 def targeted_node_removal_least(g, G, num_to_remove, sp_func, verbose=False):
     """
     Greedy node-edge removal: at each step, remove the node whose edge removals cause
     the smallest drop in global efficiency (least impactful first).
+    For directed graphs, removes both incoming and outgoing edges.
     If all remaining nodes are isolated, reuse the previous efficiency so that
     visualizations remain continuous.
     """
+    import time
+
     total_nodes = G.number_of_nodes()
     sp = sp_func(G)
     original_efficiency = efficiency_graph(G, sp)
@@ -1622,7 +1650,12 @@ def targeted_node_removal_least(g, G, num_to_remove, sp_func, verbose=False):
                 continue
 
             temp_G = G.copy()
-            temp_G.remove_edges_from(list(temp_G.edges(node)))
+            # Remove all edges of the node (incoming + outgoing for directed)
+            if G.is_directed():
+                temp_edges_to_remove = list(temp_G.out_edges(node)) + list(temp_G.in_edges(node))
+            else:
+                temp_edges_to_remove = list(temp_G.edges(node))
+            temp_G.remove_edges_from(temp_edges_to_remove)
 
             try:
                 sp_temp = sp_func(temp_G)
@@ -1649,7 +1682,11 @@ def targeted_node_removal_least(g, G, num_to_remove, sp_func, verbose=False):
             continue
 
         # Perform edge removal
-        G.remove_edges_from(list(G.edges(best_node)))
+        if G.is_directed():
+            edges_to_remove = list(G.out_edges(best_node)) + list(G.in_edges(best_node))
+        else:
+            edges_to_remove = list(G.edges(best_node))
+        G.remove_edges_from(edges_to_remove)
         removed_nodes.append(best_node)
         removals_done += 1
 
@@ -1674,6 +1711,7 @@ def targeted_node_removal_least(g, G, num_to_remove, sp_func, verbose=False):
             print(f"Time taken: {elapsed:.4f} seconds\n")
 
     return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times
+
 
 def targeted_edge_removal(g, G, num_to_remove, sp_func, verbose=False):
     """
@@ -2182,7 +2220,7 @@ def top_hubs_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     """
     Remove edges of top hubs (by degree) sequentially and track efficiency degradation.
 
-    Returns:
+    Works for both directed and undirected graphs. Returns:
         original_efficiency, efficiencies (normalized),
         percent_remaining, removed_nodes, removal_times, removed_node_names
     """
@@ -2223,8 +2261,12 @@ def top_hubs_node_removal(g, G, num_to_remove, sp_func, verbose=False):
             removal_times.append(0)
             continue
 
-        # Remove all edges of the node instead of removing the node
-        edges_to_remove = list(G.edges(node))
+        # Remove all edges (incoming + outgoing) for directed graphs
+        if isinstance(G, nx.DiGraph):
+            edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
+        else:
+            edges_to_remove = list(G.edges(node))
+
         G.remove_edges_from(edges_to_remove)
         removed_nodes.append(node)
         removed_node_names.append(g.nodes[node].get('name', str(node)))
@@ -2252,12 +2294,14 @@ def top_hubs_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times, removed_node_names
 
 
-
 def top_train_hubs_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     """
     Remove edges of top train hubs (by number of trains) sequentially and track efficiency degradation.
-    """
 
+    Works for both directed and undirected graphs. Returns:
+        original_efficiency, efficiencies (normalized),
+        percent_remaining, removed_nodes, removal_times, removed_node_names
+    """
     import time
 
     # Calculate num_trains for each node
@@ -2301,8 +2345,12 @@ def top_train_hubs_node_removal(g, G, num_to_remove, sp_func, verbose=False):
             removal_times.append(0)
             continue
 
-        # Remove all edges of the node instead of removing the node
-        edges_to_remove = list(G.edges(node))
+        # Remove all edges (incoming + outgoing) for directed graphs
+        if isinstance(G, nx.DiGraph):
+            edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
+        else:
+            edges_to_remove = list(G.edges(node))
+
         G.remove_edges_from(edges_to_remove)
         removed_nodes.append(node)
         removed_node_names.append(g.nodes[node].get('name', str(node)))
