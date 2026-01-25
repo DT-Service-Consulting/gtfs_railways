@@ -10,7 +10,7 @@ from gtfspy import import_gtfs, gtfs, networks # type: ignore
 import networkx as nx # type: ignore
 import random
 import pandas as pd # type: ignore
-from collections import deque
+from collections import deque, defaultdict
 from functools import wraps
 from statistics import mean
 from scipy import stats # type: ignore
@@ -2218,25 +2218,21 @@ def betweenness_node_removal_unweighted_least(g, G, num_to_remove, sp_func, verb
 
 def top_hubs_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     """
-    Remove edges of top hubs (by degree) sequentially and track efficiency degradation.
-
-    Works for both directed and undirected graphs. Returns:
-        original_efficiency, efficiencies (normalized),
-        percent_remaining, removed_nodes, removal_times, removed_node_names
+    Degree based removal.
+    Nodes are grouped by degree (descending).
+    Within each degree group, nodes are removed using targeted efficiency drop.
     """
-    import time
 
-    # Sort nodes by degree descending
-    hubs_sorted = sorted(G.degree(), key=lambda x: x[1], reverse=True)
-    removal_nodes = [node for node, degree in hubs_sorted[:num_to_remove]]
+    # Group nodes by degree
+    degree_buckets = defaultdict(list)
+    for node, deg in G.degree():
+        degree_buckets[deg].append(node)
 
-    if verbose:
-        print(f"Top hubs to remove edges: {removal_nodes}")
+    # Sort degrees descending
+    sorted_degrees = sorted(degree_buckets.keys(), reverse=True)
 
     sp = sp_func(G)
     original_efficiency = efficiency_graph(g, sp)
-    if verbose:
-        print(f"Original Efficiency: {original_efficiency}")
 
     efficiencies = [1.0]
     num_removed = [0]
@@ -2246,52 +2242,101 @@ def top_hubs_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     removal_times = []
 
     total_nodes = G.number_of_nodes()
+    removals_done = 0
 
-    for i, node in enumerate(removal_nodes):
-        start_time = time.perf_counter()
-
-        if node not in G:
-            if verbose:
-                print(f"Node {node} missing, skipping.")
-            efficiencies.append(efficiencies[-1])
-            num_removed.append(num_removed[-1])
-            percent_remaining.append(100 * (1 - num_removed[-1] / total_nodes))
-            removed_nodes.append(None)
-            removed_node_names.append(None)
-            removal_times.append(0)
-            continue
-
-        # Remove all edges (incoming + outgoing) for directed graphs
-        if isinstance(G, nx.DiGraph):
-            edges_to_remove = list(G.in_edges(node)) + list(G.out_edges(node))
-        else:
-            edges_to_remove = list(G.edges(node))
-
-        G.remove_edges_from(edges_to_remove)
-        removed_nodes.append(node)
-        removed_node_names.append(g.nodes[node].get('name', str(node)))
-
-        try:
-            sp = sp_func(G)
-            eff = efficiency_graph(g, sp)
-        except Exception as e:
-            if verbose:
-                print(f"Error after removing edges of {node}: {e}")
+    for deg in sorted_degrees:
+        if removals_done >= num_to_remove:
             break
 
-        elapsed = time.perf_counter() - start_time
-        normalized_eff = eff / original_efficiency
-
-        efficiencies.append(normalized_eff)
-        num_removed.append(num_removed[-1] + 1)
-        percent_remaining.append(100 * (1 - num_removed[-1] / total_nodes))
-        removal_times.append(round(elapsed, 4))
+        candidates = degree_buckets[deg]
 
         if verbose:
-            print(f"Removed edges of node {node} ({removed_node_names[-1]}) → Normalized Efficiency: {normalized_eff:.4f}")
-            print(f"Time taken: {elapsed:.4f} seconds\n")
+            print(f"Processing degree {deg} with nodes {candidates}")
 
-    return original_efficiency, efficiencies, percent_remaining, removed_nodes, removal_times, removed_node_names
+        while candidates and removals_done < num_to_remove:
+            start_time = time.perf_counter()
+
+            sp = sp_func(G)
+            current_eff = efficiency_graph(g, sp)
+
+            max_drop = -1
+            best_node = None
+
+            for node in candidates:
+                if node not in G or G.degree(node) == 0:
+                    continue
+
+                temp_G = G.copy()
+                if G.is_directed():
+                    edges = list(temp_G.in_edges(node)) + list(temp_G.out_edges(node))
+                else:
+                    edges = list(temp_G.edges(node))
+                temp_G.remove_edges_from(edges)
+
+                try:
+                    sp_temp = sp_func(temp_G)
+                    eff_temp = efficiency_graph(g, sp_temp)
+                except Exception:
+                    continue
+
+                drop = current_eff - eff_temp
+                if drop > max_drop:
+                    max_drop = drop
+                    best_node = node
+
+            if best_node is None:
+                efficiencies.append(efficiencies[-1])
+                num_removed.append(num_removed[-1] + 1)
+                percent_remaining.append(100 * (1 - num_removed[-1] / total_nodes))
+                removed_nodes.append(None)
+                removed_node_names.append(None)
+                removal_times.append(0)
+                removals_done += 1
+                continue
+
+            # Remove edges of selected node
+            if G.is_directed():
+                edges_to_remove = list(G.in_edges(best_node)) + list(G.out_edges(best_node))
+            else:
+                edges_to_remove = list(G.edges(best_node))
+            G.remove_edges_from(edges_to_remove)
+
+            candidates.remove(best_node)
+
+            try:
+                sp_new = sp_func(G)
+                eff = efficiency_graph(g, sp_new)
+            except Exception as e:
+                if verbose:
+                    print(f"Error after removing edges of {best_node}: {e}")
+                break
+
+            elapsed = time.perf_counter() - start_time
+            normalized_eff = eff / original_efficiency
+
+            efficiencies.append(normalized_eff)
+            removals_done += 1
+            num_removed.append(removals_done)
+            percent_remaining.append(100 * (1 - removals_done / total_nodes))
+            removed_nodes.append(best_node)
+            removed_node_names.append(g.nodes[best_node].get("name", str(best_node)))
+            removal_times.append(round(elapsed, 4))
+
+            if verbose:
+                print(
+                    f"Removed edges of node {best_node} "
+                    f"(degree {deg}) → Normalized Efficiency: {normalized_eff:.4f}"
+                )
+
+    return (
+        original_efficiency,
+        efficiencies,
+        percent_remaining,
+        removed_nodes,
+        removal_times,
+        removed_node_names,
+    )
+
 
 
 def top_train_hubs_node_removal(g, G, num_to_remove, sp_func, verbose=False):
