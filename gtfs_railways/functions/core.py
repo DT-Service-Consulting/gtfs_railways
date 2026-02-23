@@ -3041,3 +3041,60 @@ def plot_top_hubs(graph, top_n=10, seed=42):
     plot_graph_highlight_node(graph, highlight_nodes=top_hub_nodes)
 
     return top_hub_df
+
+def plot_efficiency_results(percent_remaining, efficiencies, title="Impact of Node Removal on Network Efficiency (Normalized)"):
+    """
+    Plots the change in normalized efficiency as nodes are removed.
+
+    Parameters:
+    - num_removed: List of number of nodes removed
+    - efficiencies: Corresponding list of normalized efficiencies
+    - title: Plot title
+    """
+    plt.figure(figsize=(6, 4))
+    plt.plot(percent_remaining, efficiencies, marker='o')
+    plt.xlabel("Percentage Remaining")
+    plt.ylabel("Normalized Efficiency")
+    plt.title(title)
+    plt.grid(True)
+    plt.gca().invert_xaxis()
+    plt.tight_layout()
+    plt.show()
+
+def plot_efficiency_results_multi(efficiency_data, size, versions=None):
+    """
+    Plots efficiency curves for specified versions and subgraph size.
+
+    Parameters:
+    - efficiency_data: dict from get_efficiency_curves output:
+        { version_label: { size: [ { 'curve': [...], 'seed': int, ... }, ... ] } }
+    - seeds: List of seed values used
+    - size: Integer size of the subgraph to plot
+    - versions: Optional list of version labels to plot (e.g. ['v0', 'v4']); if None, plots all
+    """
+    if versions is None:
+        versions = sorted(efficiency_data.keys())
+
+    plt.figure(figsize=(6 * len(versions), 5))
+
+    for i, label in enumerate(versions, start=1):
+        plt.subplot(1, len(versions), i)
+
+        runs = efficiency_data.get(label, {}).get(size, [])
+        if not runs:
+            plt.title(f'{label} - Size {size} (no data)')
+            continue
+
+        for idx, run in enumerate(runs):
+            curve = run['curve']
+            seed = run.get('seed', 'unknown')
+            plt.plot(curve, label=f'Seed {seed}, Run {idx + 1}')
+
+        plt.title(f'{label} - Size {size}')
+        plt.xlabel('Nodes removed')
+        plt.ylabel('Efficiency')
+        plt.legend(fontsize='small', loc='best')
+        plt.grid(True)
+
+    plt.tight_layout(rect=[0, 0, 0.9, 0.75])
+    plt.show()
