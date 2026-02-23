@@ -200,3 +200,4 @@ cython_debug/
 
 sqlite/
 tmp_routing_test_data
+examples/data/belgium.sqlite

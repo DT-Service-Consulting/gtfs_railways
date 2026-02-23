@@ -47,7 +47,3 @@ pip gtfs_railways/external_packages/gtfspy
 
 - **example_04.py**
    - Minimal working example of the nodes removal simulation on a single graph.
-
-
-- **example_05.py**
-    - Minimal working example of the simulations of node removals for multiple subgraphs
