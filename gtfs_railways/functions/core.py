@@ -2307,10 +2307,6 @@ def betweenness_edge_removal_weighted(g, G, num_to_remove, sp_func, verbose=Fals
 
     return original_efficiency, efficiencies, percent_remaining, removed_edges, removal_times
 
-
-import time
-import networkx as nx
-
 def betweenness_edge_removal_unweighted(g, G, num_to_remove, sp_func, verbose=False):
     """
     Removes edges based on descending edge betweenness centrality,
@@ -2516,8 +2512,6 @@ def top_hubs_node_removal(g, G, num_to_remove, sp_func, verbose=False):
         removal_times,
         removed_node_names,
     )
-
-
 
 def top_train_hubs_node_removal(g, G, num_to_remove, sp_func, verbose=False):
     """
